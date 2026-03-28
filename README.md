@@ -23,8 +23,10 @@ IIVKIS_Portal/
 │       ├── integration/        # Integration AI Agent
 │       └── analysis/           # Analysis AI Agent
 ├── docs/
-│   ├── architecture.md         # System design & component overview
-│   └── dependency-map.md       # Inter-package dependency graph
+│   ├── requirements.md              # Requirements v1.1.0 — 209 FR/NFR IDs
+│   ├── requirements-validation.md   # Phase 1 validation report (13 gaps resolved)
+│   ├── architecture.md              # System design & component overview
+│   └── dependency-map.md            # Inter-package dependency graph
 └── scripts/
     └── check-workspaces.js     # Verify all workspace packages exist
 ```
