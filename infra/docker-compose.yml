@@ -1,0 +1,291 @@
+# IIVKIS — Local Development Environment
+# Usage:
+#   cd infra && cp .env.example .env   # edit secrets as needed
+#   docker compose up -d
+#
+# Services exposed on localhost:
+#   PostgreSQL   → 5432
+#   Redis        → 6379
+#   Neo4j HTTP   → 7474  (browser UI)
+#   Neo4j Bolt   → 7687
+#   Keycloak     → 8080  (admin: /admin)
+#   Vault        → 8200  (UI: /ui)
+#   Prometheus   → 9090
+#   Grafana      → 3001  (admin dashboard)
+#   IIVKIS API   → 4000  (health: /health, /health/ready)
+
+name: iivkis
+
+# ─── Named volumes ──────────────────────────────────────────────────────────
+volumes:
+  postgres-data:
+  redis-data:
+  neo4j-data:
+  neo4j-logs:
+  neo4j-import:
+  vault-data:
+  prometheus-data:
+  grafana-data:
+
+# ─── Network ────────────────────────────────────────────────────────────────
+networks:
+  iivkis-net:
+    driver: bridge
+
+# ─── Services ───────────────────────────────────────────────────────────────
+services:
+
+  # ── PostgreSQL 15 + pgvector ───────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: iivkis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-iivkis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-iivkis_dev_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-iivkis}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - iivkis-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-iivkis} -d ${POSTGRES_DB:-iivkis}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Redis 7 ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: iivkis-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:-iivkis_dev_pass}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - iivkis-net
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - -a
+        - ${REDIS_PASSWORD:-iivkis_dev_pass}
+        - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Neo4j 5 (Knowledge Graph) ─────────────────────────────────────────────
+  # Used for CI/topology graph queries alongside PostgreSQL relational store.
+  neo4j:
+    image: neo4j:5
+    container_name: iivkis-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-iivkis_dev_pass}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_dbms_security_procedures_allowlist: apoc.*
+      NEO4J_server_config_strict__validation_enabled: "false"
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+      - neo4j-import:/import
+    networks:
+      - iivkis-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --quiet --spider http://localhost:7474 || exit 1
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  # ── Keycloak 24 (Identity Provider — OIDC/SAML) ───────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: iivkis-keycloak
+    restart: unless-stopped
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KC_DB: dev-mem
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_dev_pass}
+      KC_HTTP_PORT: "8080"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+      - "9000:9000"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+    networks:
+      - iivkis-net
+    healthcheck:
+      # Keycloak 24 management port is 9000
+      test:
+        - CMD-SHELL
+        - exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\r\nHost:localhost\r\nConnection:close\r\n\r\n' >&3 && cat <&3 | grep -q '"status":"UP"'
+      interval: 30s
+      timeout: 15s
+      retries: 10
+      start_period: 90s
+
+  # ── HashiCorp Vault 1.15 (Secrets — dev mode) ─────────────────────────────
+  # NOTE: dev mode stores data in-memory only. Use Raft HA in production.
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: iivkis-vault
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    command:
+      - vault
+      - server
+      - -dev
+      - -dev-listen-address=0.0.0.0:8200
+      - -dev-root-token-id=${VAULT_DEV_ROOT_TOKEN:-iivkis-dev-root-token}
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN:-iivkis-dev-root-token}
+      VAULT_ADDR: http://0.0.0.0:8200
+    ports:
+      - "${VAULT_PORT:-8200}:8200"
+    volumes:
+      - vault-data:/vault/data
+    networks:
+      - iivkis-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - VAULT_ADDR=http://127.0.0.1:8200 vault status | grep -q 'Initialized.*true'
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── Prometheus (Metrics) ───────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: iivkis-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - iivkis-net
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --spider
+        - http://localhost:9090/-/healthy
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Grafana 10 (Dashboards) ────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: iivkis-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-iivkis_dev_pass}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_HTTP_PORT: "3001"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    ports:
+      - "${GRAFANA_PORT:-3001}:3001"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - iivkis-net
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --spider
+        - http://localhost:3001/api/health
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── IIVKIS API (base) ──────────────────────────────────────────────────────
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+      target: development
+    container_name: iivkis-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: ${API_PORT:-4000}
+      DATABASE_URL: postgres://${POSTGRES_USER:-iivkis}:${POSTGRES_PASSWORD:-iivkis_dev_pass}@postgres:5432/${POSTGRES_DB:-iivkis}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-iivkis_dev_pass}@redis:6379
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-iivkis_dev_pass}
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_DEV_ROOT_TOKEN:-iivkis-dev-root-token}
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-iivkis}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-iivkis-api}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    networks:
+      - iivkis-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --quiet --spider http://localhost:4000/health || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

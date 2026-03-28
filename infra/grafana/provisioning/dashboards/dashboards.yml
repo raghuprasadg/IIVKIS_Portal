@@ -1,0 +1,14 @@
+apiVersion: 1
+
+providers:
+  - name: IIVKIS Dashboards
+    orgId: 1
+    folder: IIVKIS
+    folderUid: iivkis
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

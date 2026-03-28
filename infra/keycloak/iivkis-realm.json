@@ -1,0 +1,118 @@
+{
+  "id": null,
+  "realm": "iivkis",
+  "displayName": "IIVKIS Portal",
+  "displayNameHtml": "<b>IIVKIS</b> Portal",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "defaultLocale": "en",
+  "internationalizationEnabled": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "tenant-admin",
+        "description": "Full access to tenant configuration, users, and data"
+      },
+      {
+        "name": "ops-engineer",
+        "description": "Incident management, knowledge search, AI chat, dashboards"
+      },
+      {
+        "name": "read-only",
+        "description": "Read-only access to incidents, knowledge, and analytics"
+      },
+      {
+        "name": "billing-admin",
+        "description": "Access to billing, usage, and subscription management"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "iivkis-portal",
+      "name": "IIVKIS Portal",
+      "description": "Next.js frontend (public OIDC client — PKCE flow)",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3000"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "defaultClientScopes": [
+        "openid",
+        "profile",
+        "email"
+      ]
+    },
+    {
+      "clientId": "iivkis-api",
+      "name": "IIVKIS API",
+      "description": "Express REST API (confidential client — client credentials + token introspection)",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "change-me-in-production",
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "bearerOnly": true,
+      "defaultClientScopes": [
+        "openid",
+        "profile",
+        "email"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "devuser",
+      "email": "devuser@iivkis.local",
+      "firstName": "Dev",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "devuser_pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ops-engineer"]
+    },
+    {
+      "username": "devadmin",
+      "email": "devadmin@iivkis.local",
+      "firstName": "Dev",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "devadmin_pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["tenant-admin"]
+    }
+  ]
+}

@@ -40,6 +40,9 @@ Thumbs.db
 coverage/
 .nyc_output/
 
-# Temporary files
-tmp/
-temp/
+# Docker / infra
+infra/.env
+infra/postgres/data/
+infra/neo4j/data/
+infra/vault/data/
+infra/grafana/data/
