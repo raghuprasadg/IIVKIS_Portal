@@ -59,6 +59,7 @@ npm run typecheck
 
 - [Requirements Specification](docs/requirements.md) — v1.1.0 validated baseline
 - [Requirements Validation Report](docs/requirements-validation.md)
+- [Threat Model](docs/threat-model.md) — STRIDE analysis, 52 threats, RBAC/mTLS/Vault/WAF/OPA controls
 - [Architecture Overview](docs/architecture.md)
 - [Dependency Map](docs/dependency-map.md)
 
@@ -68,4 +69,4 @@ npm run typecheck
 |---|---|---|
 | **STEP 0** | System init — monorepo, base configs, agent stubs | ✅ Done |
 | **STEP 1** | Requirements — functional, NFRs, multi-tenancy, LLM, billing, security, resiliency | ✅ Done |
-| **STEP 2+** | Design & implementation | 🔜 Pending |
+| **STEP 2** | Threat Model — STRIDE analysis, RBAC/mTLS/Vault/WAF/OPA controls | ✅ Done |

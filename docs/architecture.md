@@ -90,7 +90,7 @@ User (Browser)
 |---|---|---|
 | **STEP 0** | System initialisation — monorepo structure, base configs, agent stubs | ✅ Done |
 | **STEP 1** | Requirements — functional, NFRs, multi-tenancy, LLM, billing, security, resiliency | ✅ Done |
-| **STEP 2** | Design — data models, API contracts, sequence diagrams | 🔜 Pending |
+| **STEP 2** | Threat Modeling — STRIDE analysis, RBAC/mTLS/Vault/WAF/OPA controls, risk register | ✅ Done |
 | **STEP 3** | Vendor Knowledge Agent implementation | 🔜 Pending |
 | **STEP 4** | Troubleshooting Agent implementation | 🔜 Pending |
 | **STEP 5** | Integration Agent implementation | 🔜 Pending |
