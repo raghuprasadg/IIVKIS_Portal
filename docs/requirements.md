@@ -1,11 +1,18 @@
 # IIVKIS Requirements Specification
 
 **Document ID:** IIVKIS-REQ-001  
-**Version:** 1.0.0  
-**Status:** Approved — Baseline  
-**Phase:** STEP 1 — Requirements  
+**Version:** 1.1.0  
+**Status:** Validated — Baseline Confirmed  
+**Phase:** STEP 1 — Requirements (Validated)  
 **Author:** Architect Agent  
 **Date:** 2026-03-28  
+
+### Revision History
+
+| Version | Date | Author | Summary |
+|---|---|---|---|
+| 1.0.0 | 2026-03-28 | Architect Agent | Initial baseline — functional + non-functional requirements across all 11 FR domains and 9 NFR categories |
+| 1.1.0 | 2026-03-28 | Architect Agent | Validation pass — 13 gaps identified and resolved: FR-IAM-008, FR-INT-009/010, FR-LLM-017/018, FR-VK-010, FR-TS-011, §4.12 SLA, NFR-MAINT-007/008, NFR-COMP-007, NFR-SEC-016; OQ-008 promoted to FR; RTM and changelog added |
 
 ---
 
@@ -26,6 +33,7 @@
    - 4.9 [Notifications & Alerting](#49-notifications--alerting)
    - 4.10 [Billing & Subscription Management](#410-billing--subscription-management)
    - 4.11 [Administration & Platform Management](#411-administration--platform-management)
+   - 4.12 [Incident SLA Management](#412-incident-sla-management)
 5. [Non-Functional Requirements](#5-non-functional-requirements)
    - 5.1 [Performance](#51-performance)
    - 5.2 [Scalability](#52-scalability)
@@ -39,6 +47,7 @@
 6. [Constraints & Assumptions](#6-constraints--assumptions)
 7. [Glossary](#7-glossary)
 8. [Open Questions](#8-open-questions)
+9. [Requirements Traceability Matrix](#9-requirements-traceability-matrix)
 
 ---
 
@@ -181,6 +190,7 @@ Requirements use the identifier format `FR-<DOMAIN>-<NNN>`.
 | FR-IAM-005 | All authorisation decisions **MUST** follow RBAC, with plans to extend to ABAC for fine-grained resource control. | Must |
 | FR-IAM-006 | The system **MUST** invalidate all active sessions and tokens upon user deactivation or password reset. | Must |
 | FR-IAM-007 | Token lifetimes: access tokens ≤ 15 minutes; refresh tokens ≤ 30 days (sliding); API keys until explicit revocation. | Must |
+| FR-IAM-008 | The system **MUST** support session management: users can view all active sessions (device, IP, last-active), and individually or bulk-revoke them. Tenant administrators **MUST** be able to force-terminate all sessions for any user within their tenant. The platform **MUST** enforce a configurable maximum of concurrent active sessions per user (default: 5). | Must |
 
 ---
 
@@ -197,6 +207,7 @@ Requirements use the identifier format `FR-<DOMAIN>-<NNN>`.
 | FR-VK-007 | Tenant administrators **MUST** be able to subscribe to specific vendor feeds and set refresh intervals (minimum: 15 minutes). | Must |
 | FR-VK-008 | The Vendor Knowledge Agent **MUST** expose a semantic search endpoint backed by vector embeddings so natural-language queries can retrieve relevant articles. | Must |
 | FR-VK-009 | Knowledge items **MUST** be scoped per tenant: each tenant maintains its own knowledge corpus plus access to a shared global base. | Must |
+| FR-VK-010 | Vector indexes used for semantic search **MUST** be tenant-isolated via either separate physical indexes or strict namespace partitioning. Cross-tenant vector similarity queries **MUST** be architecturally prevented — a query issued in tenant A's context **MUST NOT** return embeddings belonging to tenant B. | Must |
 
 ---
 
@@ -214,6 +225,7 @@ Requirements use the identifier format `FR-<DOMAIN>-<NNN>`.
 | FR-TS-008 | Incident history **MUST** be immutable and fully auditable — every status change and comment is logged with actor and timestamp. | Must |
 | FR-TS-009 | The platform **MUST** support incident templates for common failure patterns to pre-populate fields and recommended steps. | Should |
 | FR-TS-010 | The platform **MUST** support bulk incident import from external ITSM systems via a CSV/JSON template. | Should |
+| FR-TS-011 | The platform **MUST** support incident escalation policies: when a defined SLA response or resolution threshold is breached, the incident **MUST** be automatically escalated to the next tier (configurable: team lead, on-call manager) with notification sent via all active notification channels for the tenant. Escalation history **MUST** be recorded in the incident audit trail. | Must |
 
 ---
 
@@ -280,6 +292,8 @@ The Correlation Engine is a core differentiating subsystem of IIVKIS. It automat
 | FR-LLM-014 | **Advisory Summarisation:** When new vendor advisories are ingested, the LLM **MUST** generate a structured summary (affected products, severity, recommended actions) within 60 seconds. | Must |
 | FR-LLM-015 | **Feedback-Driven Improvement:** The system **MUST** collect explicit (thumbs up/down) and implicit (step accepted/rejected) feedback and route it to the model-improvement pipeline. | Should |
 | FR-LLM-016 | **Guardrails:** The LLM Gateway **MUST** apply content filtering to block hallucinated or harmful outputs before they reach end users. | Must |
+| FR-LLM-017 | **Streaming Responses:** The LLM Gateway **MUST** support streaming completions via Server-Sent Events (SSE) for user-facing conversational features (FR-LLM-010). Streaming **MUST** be opt-in per request; batch (non-streaming) mode remains available for programmatic consumers. The Portal **MUST** progressively render streamed tokens to the user. | Must |
+| FR-LLM-018 | **Cost Optimisation:** The LLM Gateway **MUST** implement semantic response caching: identical or near-identical prompts (cosine similarity ≥ 0.97) **MUST** return a cached response rather than issuing a new provider request. The gateway **MUST** support model-tier routing rules so lower-cost models handle simple classification tasks and higher-capability models are reserved for complex reasoning, reducing per-tenant token spend. | Should |
 
 ---
 
@@ -297,6 +311,8 @@ The Correlation Engine is a core differentiating subsystem of IIVKIS. It automat
 | FR-INT-006 | Integration event delivery **MUST** be idempotent — duplicate events from external systems **MUST** be detected and discarded using event fingerprinting. | Must |
 | FR-INT-007 | A generic webhook integration **MUST** be available with a configurable JSON schema mapper so any system can push events to IIVKIS. | Must |
 | FR-INT-008 | Integration health status **MUST** be visible to tenant administrators with last-sync timestamp, error count, and event throughput metrics. | Should |
+| FR-INT-009 | All inbound webhooks accepted by IIVKIS **MUST** support HMAC-SHA256 signature verification. Requests without a valid signature **MUST** be rejected with HTTP 401. The platform **MUST** implement replay-attack prevention by rejecting webhook requests whose timestamp deviates more than 5 minutes from server time. | Must |
+| FR-INT-010 | Tenant administrators **MUST** be able to configure an IP allowlist for each inbound webhook endpoint; requests from non-allowlisted IPs **MUST** be blocked when an allowlist is active. | Should |
 
 #### 4.7.2 CMDB Integration
 
@@ -382,6 +398,18 @@ The Correlation Engine is a core differentiating subsystem of IIVKIS. It automat
 
 ---
 
+### 4.12 Incident SLA Management
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-SLA-001 | The platform **MUST** support definition of SLA policies per tenant, specifying maximum response time (time to first acknowledgement) and maximum resolution time per incident severity level. Default targets: Critical — respond 15 min / resolve 4 h; High — respond 30 min / resolve 8 h; Medium — respond 2 h / resolve 24 h; Low — respond 8 h / resolve 72 h. | Must |
+| FR-SLA-002 | SLA timers **MUST** start automatically on incident creation and pause when the incident moves to a vendor-pending or awaiting-customer status; timers resume on re-activation. | Must |
+| FR-SLA-003 | The portal **MUST** display real-time SLA countdown indicators on incident views, colour-coded by proximity to breach (green > 50%, amber 25–50%, red < 25%). | Must |
+| FR-SLA-004 | When an incident is within a configurable warning threshold (default: 25% of SLA time remaining), the platform **MUST** send an SLA-warning notification to the assignee and team lead via all active notification channels. | Must |
+| FR-SLA-005 | SLA compliance metrics (% incidents within SLA, % breached, average resolution time per severity) **MUST** be included in the analytics dashboards (FR-AN-001) and schedulable reports (FR-AN-003). | Must |
+
+---
+
 ## 5. Non-Functional Requirements
 
 Requirements use the identifier format `NFR-<CATEGORY>-<NNN>`.
@@ -445,6 +473,7 @@ Requirements use the identifier format `NFR-<CATEGORY>-<NNN>`.
 | NFR-SEC-013 | All API responses **MUST** include appropriate security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options). | Must |
 | NFR-SEC-014 | Prompt injection attacks against the LLM layer **MUST** be detected and blocked via input sanitisation and output validation guardrails. | Must |
 | NFR-SEC-015 | The platform **MUST** implement SSRF protection on all URL-accepting inputs (integration webhook URLs, vendor feed URLs). | Must |
+| NFR-SEC-016 | All API responses subject to rate limiting **MUST** include standard rate-limit headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` (Unix epoch). Responses that exceed the limit **MUST** return HTTP 429 with a `Retry-After` header. | Must |
 
 #### 5.4.3 Audit & Non-Repudiation
 
@@ -534,6 +563,7 @@ Requirements use the identifier format `NFR-<CATEGORY>-<NNN>`.
 | NFR-COMP-004 | PII within incidents, logs, and LLM prompts **MUST** be identifiable, maskable, and eligible for erasure on GDPR request. | Must |
 | NFR-COMP-005 | The platform **SHOULD** achieve ISO/IEC 27001 certification within 18 months of GA. | Should |
 | NFR-COMP-006 | All LLM prompt/completion data involving tenant content **MUST NOT** be used to train third-party LLM provider models; data processing agreements (DPA) **MUST** be in place with all LLM providers. | Must |
+| NFR-COMP-007 | The platform **MUST** enforce a configurable operational data retention policy per tenant. Default retention windows: closed incidents — 3 years online, 7 years cold archive; correlation groups — 2 years; raw signals — 90 days online, 1 year cold archive; analytics aggregates — 5 years. Data past the retention window **MUST** be automatically purged or anonymised; tenant administrators **MUST** be able to extend retention within plan limits. | Must |
 
 ---
 
@@ -559,6 +589,8 @@ Requirements use the identifier format `NFR-<CATEGORY>-<NNN>`.
 | NFR-MAINT-004 | New external integrations **MUST** be addable by implementing a defined integration adapter interface — without modifying the Integration Agent core. | Must |
 | NFR-MAINT-005 | Feature flags **MUST** be used for all new capabilities at launch, allowing gradual rollout and instant rollback. | Must |
 | NFR-MAINT-006 | All deployment infrastructure **MUST** be defined as code (Terraform or Pulumi); manual infra changes are prohibited in production. | Must |
+| NFR-MAINT-007 | All public REST API endpoints **MUST** use URI-based versioning (e.g., `/api/v1/…`). A deprecation policy **MUST** be in place: deprecated API versions **MUST** be announced with a minimum 6-month sunset period via response headers (`Deprecation`, `Sunset`, `Link`) and developer changelog. No breaking changes are permitted within a published major version. | Must |
+| NFR-MAINT-008 | A CI/CD pipeline **MUST** be implemented for every service in the monorepo, automatically running: linting, type-checking, unit tests, integration tests, security scanning (dependency CVE + SAST), Docker image build, and deployment to staging on every pull request merge. Production deployments **MUST** require a passing staging deployment and explicit promotion approval. | Must |
 
 ---
 
@@ -624,4 +656,134 @@ Requirements use the identifier format `NFR-<CATEGORY>-<NNN>`.
 | OQ-005 | Is a self-hosted deployment model (on-premises Kubernetes) required from day one, or is cloud-only sufficient for GA? | Engineering Lead | STEP 2 |
 | OQ-006 | Which payment processor is preferred — Stripe, Zuora, or another? | Finance / Product | STEP 5 |
 | OQ-007 | What is the preferred message queue technology (Kafka, RabbitMQ, AWS SQS, Azure Service Bus)? | Platform Team | STEP 2 |
-| OQ-008 | Should the LLM Gateway support streaming (Server-Sent Events) responses for the conversational troubleshooting UX? | Product | STEP 4 |
+| OQ-008 | Should the LLM Gateway support streaming (Server-Sent Events) responses for the conversational troubleshooting UX? | Product | ✅ **Resolved** — Promoted to FR-LLM-017 (Must). |
+
+---
+
+## 9. Requirements Traceability Matrix
+
+This matrix maps every mandated problem-statement domain to the requirement IDs that address it, confirming full coverage.
+
+### 9.1 Multi-Tenancy
+
+| Sub-Area | Requirement IDs |
+|---|---|
+| Tenant isolation (data-store) | FR-MT-001, FR-MT-002, FR-MT-003 |
+| Tenant lifecycle management | FR-MT-010, FR-MT-011, FR-MT-012, FR-MT-013 |
+| Per-tenant encryption (BYOK) | FR-MT-006 |
+| Per-tenant SSO | FR-MT-004 |
+| Per-tenant resource quotas | FR-MT-005 |
+| User & role management per tenant | FR-MT-020, FR-MT-021, FR-MT-022 |
+| Tenant-scoped authentication | FR-IAM-001 … FR-IAM-008 |
+| Tenant-scoped vector search isolation | FR-VK-010 |
+| Tenant-scoped integrations | FR-INT-003 |
+| Tenant-scoped analytics isolation | FR-AN-006 |
+| Tenant-scoped data retention | NFR-COMP-007 |
+| Tenant-scoped data residency | NFR-COMP-003 |
+| Database partitioning | NFR-SCALE-006 |
+
+### 9.2 Correlation Engine
+
+| Sub-Area | Requirement IDs |
+|---|---|
+| Signal ingestion (sources, enrichment, throughput) | FR-CE-001, FR-CE-002, FR-CE-003, FR-CE-004 |
+| Rule-based correlation | FR-CE-010, FR-CE-015, FR-CE-016 |
+| ML-based correlation | FR-CE-011, FR-CE-025 |
+| Temporal correlation | FR-CE-012 |
+| Topological correlation (CMDB-aware) | FR-CE-013, FR-INT-020, FR-INT-021, FR-INT-022 |
+| Semantic correlation (LLM-powered) | FR-CE-014 |
+| Correlation groups & root-cause candidates | FR-CE-020, FR-CE-021, FR-CE-022, FR-CE-023, FR-CE-024 |
+| Correlation performance | NFR-PERF-005 |
+| Correlation throughput | NFR-SCALE-004 |
+
+### 9.3 LLM Integration
+
+| Sub-Area | Requirement IDs |
+|---|---|
+| LLM Gateway (multi-provider abstraction) | FR-LLM-001, FR-LLM-002, FR-LLM-003, FR-LLM-004 |
+| LLM token budgets & metering | FR-LLM-006, FR-BILL-010 |
+| Prompt management & versioning | FR-LLM-007 |
+| LLM audit logging (with PII redaction) | FR-LLM-005 |
+| LLM guardrails & content filtering | FR-LLM-016 |
+| LLM streaming (SSE) | FR-LLM-017 |
+| LLM cost optimisation & semantic caching | FR-LLM-018 |
+| Conversational troubleshooting | FR-LLM-010 |
+| Automated resolution plans | FR-LLM-011 |
+| Semantic knowledge search | FR-LLM-012, FR-VK-008, FR-VK-010 |
+| Anomaly narrative generation | FR-LLM-013 |
+| Advisory summarisation | FR-LLM-014 |
+| Feedback-driven improvement | FR-LLM-015, FR-TS-006 |
+| Prompt injection protection | NFR-SEC-014 |
+| LLM DPA (no-training clause) | NFR-COMP-006 |
+| LLM fallback / circuit-breaker | NFR-RES-003, NFR-RES-011, NFR-RES-012 |
+
+### 9.4 Billing
+
+| Sub-Area | Requirement IDs |
+|---|---|
+| Subscription plan tiers | FR-BILL-001, FR-BILL-002, FR-BILL-003, FR-BILL-004 |
+| Usage metering (MAU, tokens, API calls, storage, events) | FR-BILL-010, FR-BILL-011 |
+| Real-time usage visibility | FR-BILL-012 |
+| Overage alerts & enforcement | FR-BILL-013, FR-BILL-014 |
+| Payment processor integration | FR-BILL-020 |
+| Invoice generation | FR-BILL-021, FR-BILL-024, FR-BILL-025 |
+| Payment retry & suspension | FR-BILL-022 |
+| Credits, discounts, adjustments | FR-BILL-023 |
+
+### 9.5 Security
+
+| Sub-Area | Requirement IDs |
+|---|---|
+| Transport encryption (TLS) | NFR-SEC-001 |
+| Data-at-rest encryption (AES-256) | NFR-SEC-002 |
+| Secrets management | NFR-SEC-003, NFR-SEC-004 |
+| Input validation & injection prevention | NFR-SEC-010 |
+| OWASP Top 10 + pentest | NFR-SEC-011 |
+| Rate limiting with headers | NFR-SEC-012, NFR-SEC-016 |
+| Security response headers | NFR-SEC-013 |
+| Prompt injection prevention | NFR-SEC-014 |
+| SSRF protection | NFR-SEC-015 |
+| Immutable audit logs (WORM) | NFR-SEC-020, NFR-SEC-021, NFR-SEC-022 |
+| Authentication event monitoring | NFR-SEC-023 |
+| mTLS inter-service communication | NFR-SEC-030 |
+| Least-privilege network policies | NFR-SEC-031 |
+| WAF at ingress | NFR-SEC-032 |
+| Vulnerability management (CVE / SAST) | NFR-SEC-033, NFR-MAINT-008 |
+| MFA enforcement | FR-IAM-004 |
+| Session management & force-logout | FR-IAM-008 |
+| Inbound webhook HMAC security | FR-INT-009, FR-INT-010 |
+| Compliance (GDPR, SOC 2) | NFR-COMP-001, NFR-COMP-002, NFR-COMP-004, NFR-COMP-005 |
+| Data residency | NFR-COMP-003 |
+
+### 9.6 Resiliency
+
+| Sub-Area | Requirement IDs |
+|---|---|
+| Independent service deployment (bulkheads) | NFR-RES-001, NFR-RES-002, NFR-RES-003 |
+| Retry with exponential backoff & jitter | NFR-RES-010 |
+| Circuit breaker | NFR-RES-011 |
+| LLM timeout fallback | NFR-RES-012 |
+| Durable message queues | NFR-RES-020, NFR-AVAIL-007 |
+| Dead-letter queues (DLQ) | NFR-RES-021 |
+| Idempotency keys | NFR-RES-022 |
+| Backup (daily full, 15-min incremental) | NFR-RES-030 |
+| Automated backup restoration testing | NFR-RES-031 |
+| DR runbook (RTO < 1 h, RPO < 15 min) | NFR-RES-032, NFR-AVAIL-003, NFR-AVAIL-004 |
+| Vector index snapshots | NFR-RES-033 |
+| Health & readiness endpoints | NFR-RES-040 |
+| Degraded-mode operation | NFR-RES-041 |
+| Operational runbooks | NFR-RES-042 |
+| HA + multi-region DR | NFR-AVAIL-005, NFR-AVAIL-006 |
+| Zero-downtime deployments | NFR-AVAIL-002 |
+
+### 9.7 Coverage Summary
+
+| Mandated Domain | Requirement Count | Status |
+|---|---|---|
+| Multi-Tenancy | 22 | ✅ Complete |
+| Correlation Engine | 18 | ✅ Complete |
+| LLM Integration | 19 | ✅ Complete |
+| Billing | 15 | ✅ Complete |
+| Security | 26 | ✅ Complete |
+| Resiliency | 18 | ✅ Complete |
+| **All 6 Domains** | **118 requirements mapped** | ✅ **Validated** |

@@ -55,7 +55,8 @@ npm run typecheck
 
 ## Documentation
 
-- [Requirements Specification](docs/requirements.md)
+- [Requirements Specification](docs/requirements.md) — v1.1.0 validated baseline
+- [Requirements Validation Report](docs/requirements-validation.md)
 - [Architecture Overview](docs/architecture.md)
 - [Dependency Map](docs/dependency-map.md)
 
