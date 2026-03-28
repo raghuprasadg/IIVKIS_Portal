@@ -61,6 +61,9 @@ npm run typecheck
 - [Requirements Validation Report](docs/requirements-validation.md)
 - [Threat Model](docs/threat-model.md) — v1.0.1 STRIDE analysis, 50 threats, RBAC/mTLS/Vault/WAF/OPA controls
 - [Threat Model Validation Report](docs/threat-model-validation.md) — Phase 2 validated, not blocked
+- [High-Level Design (HLD)](docs/hld.md) — system decomposition, multi-tenant isolation tiers, SaaS + self-host topologies
+- [Low-Level Design (LLD)](docs/lld.md) — database schemas, API contracts, KG+RAG, CE internals, LLM gateway
+- [Data Flow Diagrams (DFD)](docs/dfd.md) — L0 context, L1 system, L2 per-subsystem DFDs + sequence diagrams
 - [Architecture Overview](docs/architecture.md)
 - [Dependency Map](docs/dependency-map.md)
 
@@ -71,3 +74,4 @@ npm run typecheck
 | **STEP 0** | System init — monorepo, base configs, agent stubs | ✅ Done |
 | **STEP 1** | Requirements — functional, NFRs, multi-tenancy, LLM, billing, security, resiliency | ✅ Done |
 | **STEP 2** | Threat Model — STRIDE analysis, RBAC/mTLS/Vault/WAF/OPA controls | ✅ Done |
+| **STEP 3** | Architecture Design — HLD, LLD, DFD; multi-tenant isolation, KG+RAG, CE, SaaS+self-host | ✅ Done |

@@ -84,6 +84,24 @@ User (Browser)
 
 ---
 
+## Architecture Documents (Phase 3)
+
+Full architecture documentation produced in Phase 3:
+
+| Document | Description |
+|---|---|
+| [High-Level Design (HLD)](hld.md) | System decomposition, multi-tenant isolation tiers, SaaS + self-host deployment topologies, all subsystem overviews, ADRs |
+| [Low-Level Design (LLD)](lld.md) | Database schemas, REST API contracts, TypeScript interfaces, KG+RAG pipeline, CE state machines, LLM gateway internals |
+| [Data Flow Diagrams (DFD)](dfd.md) | L0 context, L1 system decomposition, L2 per-subsystem DFDs, cross-subsystem sequence diagrams |
+
+Key architectural decisions:
+- **PostgreSQL + pgvector** for relational + vector storage (single operational unit, tenant-namespace isolation)
+- **Apache Kafka** for durable async task dispatch (supports ≥ 1M signals/min aggregate)
+- **Helm umbrella chart** for self-hosted on-premises Kubernetes deployment (supported from GA)
+- **AWS primary / Azure secondary** cloud platform
+- **KG+RAG hybrid retrieval**: pgvector ANN + PostgreSQL graph traversal + full-text search, RRF re-ranked
+- **Three multi-tenant isolation tiers**: T1 (shared+RLS), T2 (shared+BYOK), T3 (dedicated cluster)
+
 ## Development Phases
 
 | Phase | Description | Status |
@@ -91,11 +109,12 @@ User (Browser)
 | **STEP 0** | System initialisation — monorepo structure, base configs, agent stubs | ✅ Done |
 | **STEP 1** | Requirements — functional, NFRs, multi-tenancy, LLM, billing, security, resiliency | ✅ Done |
 | **STEP 2** | Threat Modeling — STRIDE analysis, RBAC/mTLS/Vault/WAF/OPA controls, risk register | ✅ Done |
-| **STEP 3** | Vendor Knowledge Agent implementation | 🔜 Pending |
-| **STEP 4** | Troubleshooting Agent implementation | 🔜 Pending |
-| **STEP 5** | Integration Agent implementation | 🔜 Pending |
-| **STEP 6** | Analysis Agent + Correlation Engine implementation | 🔜 Pending |
-| **STEP 7** | Orchestrator routing logic + LLM Gateway | 🔜 Pending |
-| **STEP 8** | Portal UI development | 🔜 Pending |
-| **STEP 9** | Billing Engine implementation | 🔜 Pending |
-| **STEP 10** | End-to-end integration + testing | 🔜 Pending |
+| **STEP 3** | Architecture Design — HLD, LLD, DFD; multi-tenant isolation, KG+RAG, CE, SaaS+self-host | ✅ Done |
+| **STEP 4** | Vendor Knowledge Agent implementation | 🔜 Pending |
+| **STEP 5** | Troubleshooting Agent implementation | 🔜 Pending |
+| **STEP 6** | Integration Agent implementation | 🔜 Pending |
+| **STEP 7** | Analysis Agent + Correlation Engine implementation | 🔜 Pending |
+| **STEP 8** | Orchestrator routing logic + LLM Gateway | 🔜 Pending |
+| **STEP 9** | Portal UI development | 🔜 Pending |
+| **STEP 10** | Billing Engine implementation | 🔜 Pending |
+| **STEP 11** | End-to-end integration + testing | 🔜 Pending |
