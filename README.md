@@ -59,7 +59,8 @@ npm run typecheck
 
 - [Requirements Specification](docs/requirements.md) — v1.1.0 validated baseline
 - [Requirements Validation Report](docs/requirements-validation.md)
-- [Threat Model](docs/threat-model.md) — STRIDE analysis, 52 threats, RBAC/mTLS/Vault/WAF/OPA controls
+- [Threat Model](docs/threat-model.md) — v1.0.1 STRIDE analysis, 50 threats, RBAC/mTLS/Vault/WAF/OPA controls
+- [Threat Model Validation Report](docs/threat-model-validation.md) — Phase 2 validated, not blocked
 - [Architecture Overview](docs/architecture.md)
 - [Dependency Map](docs/dependency-map.md)
 

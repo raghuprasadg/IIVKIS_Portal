@@ -1,8 +1,8 @@
 # IIVKIS Threat Model
 
 **Document ID:** IIVKIS-SEC-001  
-**Version:** 1.0.0  
-**Status:** Approved — Phase 2 Baseline  
+**Version:** 1.0.1  
+**Status:** Validated — Phase 2 Baseline Confirmed  
 **Phase:** STEP 2 — Threat Modeling  
 **Author:** Security Agent  
 **Date:** 2026-03-28  
@@ -11,7 +11,8 @@
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
-| 1.0.0 | 2026-03-28 | Security Agent | Initial STRIDE threat model — all trust boundaries, 52 threats catalogued, mitigation controls (RBAC, mTLS, Vault, WAF, OPA), risk register, and control traceability matrix |
+| 1.0.0 | 2026-03-28 | Security Agent | Initial STRIDE threat model — all trust boundaries, 50 threats catalogued, mitigation controls (RBAC, mTLS, Vault, WAF, OPA), risk register, and control traceability matrix |
+| 1.0.1 | 2026-03-28 | Security Agent | Validation pass — GAP-V-01 resolved: TH-S-004 (vendor feed spoofing, Medium residual) added to §9.1 residual risk summary; Medium count corrected 9→10; status updated to Validated |
 
 ---
 
@@ -661,6 +662,7 @@ After applying all mitigation controls, the following threats carry **non-Low** 
 | Threat ID | Residual Risk | Rationale | Owner | Review Cadence |
 |---|---|---|---|---|
 | TH-S-001 | **Medium** | Credential stuffing risk persists for tenants that have not enforced MFA (MFA is enforceable but not mandatory for all plans). Mitigation: make MFA mandatory for Starter+ plans in v1.2. | Security Officer | Quarterly |
+| TH-S-004 | **Medium** | Vendor feed spoofing risk persists: feed signature verification is implemented but cannot cover unsigned or newly onboarded feeds pending manual vetting. Mitigation: enforce mandatory feed signature policy for all new vendor onboarding in v1.2; human approval gate before first ingestion. | Security Officer + Knowledge Agent Team | Per new vendor onboarding |
 | TH-T-002 | **Medium** | Prompt injection is an evolving attack vector with no complete defence. Defence-in-depth approach (WAF + OPA + guardrails) reduces but does not eliminate risk. Mitigation: continuous rule improvement; LLM output sandboxing in STEP 7. | Security Officer + AI Lead | Every release |
 | TH-T-003 | **Medium** | Knowledge base poisoning via a compromised vendor feed cannot be fully automated away; human review is required for unverified sources. Mitigation: human-review queue implemented in STEP 3. | Knowledge Agent Team | Per ingestion pipeline change |
 | TH-T-004 | **Medium** | Signal injection risk remains if a tenant fails to configure IP allowlist or HMAC on integrations. Mitigation: make HMAC mandatory (not optional) in v1.2. | Integration Team | Quarterly |
@@ -675,7 +677,7 @@ After applying all mitigation controls, the following threats carry **non-Low** 
 Before the platform can be released for General Availability:
 
 1. **All Critical inherent-risk threats** must have residual risk rated **Low** or **Medium**. ✅ Achieved per §7.2.
-2. **No more than 10 Medium residual risks** in the risk register. ✅ 9 Medium residual risks recorded.
+2. **No more than 10 Medium residual risks** in the risk register. ✅ 10 Medium residual risks recorded.
 3. **A third-party penetration test** must be completed and all Critical / High findings remediated (NFR-SEC-011).
 4. **OPA policy test coverage ≥ 90%** for all tenant-isolation, role-action-mapping, and LLM-gate policies.
 5. **Vault audit logging** must be active and shipping to SIEM before any production traffic.
