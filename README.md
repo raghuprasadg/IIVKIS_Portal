@@ -55,6 +55,7 @@ npm run typecheck
 
 ## Documentation
 
+- [Requirements Specification](docs/requirements.md)
 - [Architecture Overview](docs/architecture.md)
 - [Dependency Map](docs/dependency-map.md)
 
@@ -63,4 +64,5 @@ npm run typecheck
 | Phase | Description | Status |
 |---|---|---|
 | **STEP 0** | System init — monorepo, base configs, agent stubs | ✅ Done |
-| **STEP 1+** | Feature implementation | 🔜 Pending |
+| **STEP 1** | Requirements — functional, NFRs, multi-tenancy, LLM, billing, security, resiliency | ✅ Done |
+| **STEP 2+** | Design & implementation | 🔜 Pending |

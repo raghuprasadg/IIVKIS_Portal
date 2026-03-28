@@ -75,7 +75,7 @@ User (Browser)
 | Concern | Technology |
 |---|---|
 | Language | TypeScript 5 |
-| Frontend | React 18, Next.js 14 |
+| Frontend | React 18, Next.js 15 |
 | Backend | Node.js 18+, Express 4 |
 | Monorepo | npm workspaces |
 | Linting | ESLint 8 + `@typescript-eslint` |
@@ -86,14 +86,16 @@ User (Browser)
 
 ## Development Phases
 
-| Phase | Description |
-|---|---|
-| **STEP 0** ✅ | System initialisation — monorepo structure, base configs, agent stubs |
-| **STEP 1** | Core shared types + API skeleton |
-| **STEP 2** | Vendor Knowledge Agent implementation |
-| **STEP 3** | Troubleshooting Agent implementation |
-| **STEP 4** | Integration Agent implementation |
-| **STEP 5** | Analysis Agent implementation |
-| **STEP 6** | Orchestrator routing logic |
-| **STEP 7** | Portal UI development |
-| **STEP 8** | End-to-end integration + testing |
+| Phase | Description | Status |
+|---|---|---|
+| **STEP 0** | System initialisation — monorepo structure, base configs, agent stubs | ✅ Done |
+| **STEP 1** | Requirements — functional, NFRs, multi-tenancy, LLM, billing, security, resiliency | ✅ Done |
+| **STEP 2** | Design — data models, API contracts, sequence diagrams | 🔜 Pending |
+| **STEP 3** | Vendor Knowledge Agent implementation | 🔜 Pending |
+| **STEP 4** | Troubleshooting Agent implementation | 🔜 Pending |
+| **STEP 5** | Integration Agent implementation | 🔜 Pending |
+| **STEP 6** | Analysis Agent + Correlation Engine implementation | 🔜 Pending |
+| **STEP 7** | Orchestrator routing logic + LLM Gateway | 🔜 Pending |
+| **STEP 8** | Portal UI development | 🔜 Pending |
+| **STEP 9** | Billing Engine implementation | 🔜 Pending |
+| **STEP 10** | End-to-end integration + testing | 🔜 Pending |
