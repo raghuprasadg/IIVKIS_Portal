@@ -1,8 +1,8 @@
 # IIVKIS Low-Level Design (LLD)
 
 **Document ID:** IIVKIS-ARCH-002  
-**Version:** 1.0.0  
-**Status:** Approved — Phase 3 Baseline  
+**Version:** 1.0.1  
+**Status:** Validated — Phase 3 Validation Pass  
 **Phase:** STEP 3 — Architecture Design  
 **Author:** Architect Agent  
 **Date:** 2026-03-28  
@@ -13,6 +13,7 @@
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 1.0.0 | 2026-03-28 | Architect Agent | Initial LLD — database schemas, API contracts, service interfaces, KG schema, CE state machine, LLM gateway internals |
+| 1.0.1 | 2026-03-28 | Architect Agent | Phase 3 Validation — added 6 missing routing entries, 5 missing DB schemas (notification_policies, chat_sessions/messages, feed_subscriptions, feature_flags), RLS on 5 tables (sla_policies, integration_events, subscriptions, usage_ledger, correlation_rules), FK on correlation_groups.root_cause_ci |
 
 ---
 
@@ -28,6 +29,10 @@
    - 2.6 [Integration Schema](#26-integration-schema)
    - 2.7 [Billing Schema](#27-billing-schema)
    - 2.8 [Audit Log Schema](#28-audit-log-schema)
+   - 2.9 [Notification Policies Schema](#29-notification-policies-schema)
+   - 2.10 [Chat Sessions & Messages Schema](#210-chat-sessions--messages-schema)
+   - 2.11 [Feed Subscriptions Schema](#211-feed-subscriptions-schema)
+   - 2.12 [Feature Flags Schema](#212-feature-flags-schema)
 3. [REST API Contract Sketches](#3-rest-api-contract-sketches)
 4. [Internal Service Interfaces (TypeScript)](#4-internal-service-interfaces-typescript)
 5. [KG+RAG Pipeline — Detailed Design](#5-kgrag-pipeline--detailed-design)
@@ -111,12 +116,18 @@ export type RoutingTable = Map<AgentTaskType, {
 // Default routing configuration (overridable via feature flags)
 export const DEFAULT_ROUTING: RoutingTable = new Map([
   ['vk.search',           { kafkaTopic: 'agent.vk.requests',      timeoutMs:  2_000, maxRetries: 2, circuitBreakerKey: 'vk-agent'    }],
+  ['vk.ingest',           { kafkaTopic: 'agent.vk.requests',      timeoutMs: 30_000, maxRetries: 3, circuitBreakerKey: 'vk-agent'    }],
+  ['vk.article.get',      { kafkaTopic: 'agent.vk.requests',      timeoutMs:  1_000, maxRetries: 2, circuitBreakerKey: 'vk-agent'    }],
   ['ts.plan.generate',    { kafkaTopic: 'agent.ts.requests',      timeoutMs: 10_000, maxRetries: 1, circuitBreakerKey: 'ts-agent'    }],
   ['ts.chat.turn',        { kafkaTopic: 'agent.ts.requests',      timeoutMs: 30_000, maxRetries: 0, circuitBreakerKey: 'ts-agent'    }],
   ['int.sync',            { kafkaTopic: 'agent.int.requests',     timeoutMs: 30_000, maxRetries: 3, circuitBreakerKey: 'int-agent'   }],
+  ['int.webhook.process', { kafkaTopic: 'agent.int.requests',     timeoutMs:  5_000, maxRetries: 2, circuitBreakerKey: 'int-agent'   }],
   ['anlys.report',        { kafkaTopic: 'agent.anlys.requests',   timeoutMs: 60_000, maxRetries: 1, circuitBreakerKey: 'anlys-agent' }],
+  ['anlys.anomaly',       { kafkaTopic: 'agent.anlys.requests',   timeoutMs: 30_000, maxRetries: 1, circuitBreakerKey: 'anlys-agent' }],
   ['ce.signal.ingest',    { kafkaTopic: 'ce.signals',             timeoutMs:  5_000, maxRetries: 3, circuitBreakerKey: 'ce'          }],
+  ['ce.group.query',      { kafkaTopic: 'agent.ce.requests',      timeoutMs:  2_000, maxRetries: 2, circuitBreakerKey: 'ce'          }],
   ['llm.complete',        { kafkaTopic: 'llm.gateway.requests',   timeoutMs: 30_000, maxRetries: 1, circuitBreakerKey: 'llm-gateway' }],
+  ['llm.embed',           { kafkaTopic: 'llm.gateway.requests',   timeoutMs:  5_000, maxRetries: 2, circuitBreakerKey: 'llm-gateway' }],
 ]);
 ```
 
@@ -282,6 +293,10 @@ CREATE TABLE sla_policies (
   is_default      BOOLEAN NOT NULL DEFAULT false,
   version         INTEGER NOT NULL DEFAULT 1
 );
+
+ALTER TABLE sla_policies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY sla_policies_tenant_isolation ON sla_policies
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
 ```
 
 ### 2.3 Vendor Knowledge Schema
@@ -422,7 +437,7 @@ CREATE TABLE correlation_groups (
   tenant_id       UUID NOT NULL REFERENCES tenants(id),
   status          TEXT NOT NULL DEFAULT 'proposed', -- proposed | confirmed | rejected | merged
   confidence      NUMERIC(5,2) NOT NULL,             -- 0.00 – 100.00
-  root_cause_ci   UUID,                              -- most likely root-cause CI
+  root_cause_ci   UUID REFERENCES kg_nodes(id),           -- most likely root-cause CI (FK to CI node)
   root_cause_narrative TEXT,                         -- LLM-generated explanation
   correlation_methods TEXT[] NOT NULL DEFAULT '{}',  -- which processors contributed
   rule_ids        UUID[],                            -- rule-based: which rules matched
@@ -456,6 +471,11 @@ CREATE TABLE correlation_rules (
   created_by  UUID REFERENCES users(id),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE correlation_rules ENABLE ROW LEVEL SECURITY;
+CREATE POLICY correlation_rules_tenant_isolation ON correlation_rules
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid
+      OR tenant_id IS NULL);  -- global platform rules accessible to all tenants
 ```
 
 ### 2.6 Integration Schema
@@ -497,6 +517,10 @@ CREATE TABLE integration_events (
   occurred_at     TIMESTAMPTZ NOT NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE integration_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY integration_events_tenant_isolation ON integration_events
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
 ```
 
 ### 2.7 Billing Schema
@@ -523,6 +547,10 @@ CREATE TABLE subscriptions (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY subscriptions_tenant_isolation ON subscriptions
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+
 -- Tamper-evident usage ledger (append-only, never UPDATE/DELETE)
 CREATE TABLE usage_ledger (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -535,6 +563,11 @@ CREATE TABLE usage_ledger (
   recorded_at   TIMESTAMPTZ NOT NULL DEFAULT now()
   -- No UPDATE/DELETE privileges granted on this table
 );
+
+-- RLS is intentionally SELECT-only for the billing service role; INSERT allowed via dedicated role
+ALTER TABLE usage_ledger ENABLE ROW LEVEL SECURITY;
+CREATE POLICY usage_ledger_tenant_isolation ON usage_ledger
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
 
 CREATE INDEX idx_usage_ledger_tenant_period ON usage_ledger (tenant_id, period_start, metric_type);
 ```
@@ -564,9 +597,121 @@ CREATE INDEX idx_audit_tenant_time ON audit_logs (tenant_id, occurred_at DESC);
 CREATE INDEX idx_audit_actor_time  ON audit_logs (actor_id, occurred_at DESC);
 ```
 
----
+### 2.9 Notification Policies Schema
 
-## 3. REST API Contract Sketches
+```sql
+-- Tenant-configurable routing: event_type → channel(s)
+CREATE TABLE notification_policies (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  event_type      TEXT NOT NULL,                 -- correlation.group.created | incident.sla_breach | billing.budget_threshold | security.auth_anomaly | ...
+  channel_type    TEXT NOT NULL,                 -- email | slack | teams | pagerduty | opsgenie | webhook
+  channel_config  JSONB NOT NULL DEFAULT '{}',   -- channel-specific config (e.g., {webhook_url, channel_id})
+  recipient_ids   UUID[],                        -- target user IDs (empty = all ops-engineer role)
+  severity_filter TEXT[],                        -- only trigger for these severities (empty = all)
+  is_active       BOOLEAN NOT NULL DEFAULT true,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE notification_policies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY notification_policies_tenant_isolation ON notification_policies
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+
+CREATE INDEX idx_notif_policies_tenant_event ON notification_policies (tenant_id, event_type)
+  WHERE is_active = true;
+```
+
+### 2.10 Chat Sessions & Messages Schema
+
+```sql
+-- AI chat sessions (linked to incidents, or standalone knowledge queries)
+CREATE TABLE chat_sessions (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  user_id         UUID NOT NULL REFERENCES users(id),
+  incident_id     UUID REFERENCES incidents(id),   -- optional link to an incident
+  title           TEXT,
+  status          TEXT NOT NULL DEFAULT 'active',  -- active | archived
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY chat_sessions_tenant_isolation ON chat_sessions
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+
+CREATE INDEX idx_chat_sessions_tenant_user ON chat_sessions (tenant_id, user_id, created_at DESC);
+
+CREATE TABLE chat_messages (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id      UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  role            TEXT NOT NULL,                   -- user | assistant | system
+  content         TEXT NOT NULL,
+  citations       JSONB,                           -- [{article_id, title, url, chunk_index}]
+  model_used      TEXT,                            -- for assistant messages
+  tokens_used     INTEGER,
+  feedback        TEXT,                            -- positive | negative | NULL
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY chat_messages_tenant_isolation ON chat_messages
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+
+CREATE INDEX idx_chat_messages_session ON chat_messages (session_id, created_at ASC);
+```
+
+### 2.11 Feed Subscriptions Schema
+
+```sql
+CREATE TABLE feed_subscriptions (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID REFERENCES tenants(id),     -- NULL = global platform feed
+  name            TEXT NOT NULL,
+  feed_type       TEXT NOT NULL,                   -- rss | atom | vendor_api | manual_upload
+  source_url      TEXT,
+  auth_ref        TEXT,                            -- Vault path to feed credentials (if needed)
+  schedule_cron   TEXT NOT NULL DEFAULT '0 */4 * * *', -- default every 4 hours
+  is_active       BOOLEAN NOT NULL DEFAULT true,
+  last_fetched_at TIMESTAMPTZ,
+  last_etag       TEXT,                            -- HTTP ETag for conditional requests
+  last_modified   TEXT,                            -- HTTP Last-Modified for conditional requests
+  error_count     INTEGER NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE feed_subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY feed_subscriptions_tenant_isolation ON feed_subscriptions
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid
+      OR tenant_id IS NULL);  -- global feeds visible to all tenants
+
+CREATE INDEX idx_feed_subs_tenant_active ON feed_subscriptions (tenant_id, is_active);
+```
+
+### 2.12 Feature Flags Schema
+
+```sql
+-- Feature flags (NFR-MAINT-005) — support gradual rollout and instant rollback
+CREATE TABLE feature_flags (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name            TEXT NOT NULL UNIQUE,            -- e.g. 'ce.ml_correlator', 'llm.semantic_cache'
+  description     TEXT,
+  enabled_globally BOOLEAN NOT NULL DEFAULT false,
+  enabled_tenant_ids UUID[],                       -- explicit tenant allowlist (overrides global)
+  disabled_tenant_ids UUID[],                      -- explicit tenant denylist (overrides global+allowlist)
+  rollout_pct     SMALLINT NOT NULL DEFAULT 0,     -- 0–100 % gradual rollout (hash-based)
+  metadata        JSONB NOT NULL DEFAULT '{}',     -- {owner, ticket, release_version}
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- No RLS — feature flags are readable by all authenticated services (platform-global)
+-- Access is controlled at the API layer (ops-engineer and super-admin roles only for writes)
+CREATE INDEX idx_feature_flags_name ON feature_flags (name);
+```
 
 All endpoints prefixed `/api/v1/`. Full OpenAPI 3.1 specs in `apps/api/openapi/`.
 

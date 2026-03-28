@@ -86,13 +86,14 @@ User (Browser)
 
 ## Architecture Documents (Phase 3)
 
-Full architecture documentation produced in Phase 3:
+Full architecture documentation produced in Phase 3 (all validated — see validation report):
 
-| Document | Description |
-|---|---|
-| [High-Level Design (HLD)](hld.md) | System decomposition, multi-tenant isolation tiers, SaaS + self-host deployment topologies, all subsystem overviews, ADRs |
-| [Low-Level Design (LLD)](lld.md) | Database schemas, REST API contracts, TypeScript interfaces, KG+RAG pipeline, CE state machines, LLM gateway internals |
-| [Data Flow Diagrams (DFD)](dfd.md) | L0 context, L1 system decomposition, L2 per-subsystem DFDs, cross-subsystem sequence diagrams |
+| Document | Version | Description |
+|---|---|---|
+| [High-Level Design (HLD)](hld.md) | v1.0.1 | System decomposition, multi-tenant isolation tiers, SaaS + self-host deployment topologies, all subsystem overviews, ADRs |
+| [Low-Level Design (LLD)](lld.md) | v1.0.1 | Database schemas (27 tables), REST API contracts, TypeScript interfaces, KG+RAG pipeline, CE state machines, LLM gateway internals |
+| [Data Flow Diagrams (DFD)](dfd.md) | v1.0.1 | L0 context, L1 system decomposition, L2 per-subsystem DFDs (all 12 services), cross-subsystem sequence diagrams |
+| [Architecture Validation Report](architecture-validation.md) | v1.0.0 | Phase 3 validation — 28 gaps closed, 10 SPOFs resolved, PASS verdict |
 
 Key architectural decisions:
 - **PostgreSQL + pgvector** for relational + vector storage (single operational unit, tenant-namespace isolation)
@@ -109,7 +110,7 @@ Key architectural decisions:
 | **STEP 0** | System initialisation — monorepo structure, base configs, agent stubs | ✅ Done |
 | **STEP 1** | Requirements — functional, NFRs, multi-tenancy, LLM, billing, security, resiliency | ✅ Done |
 | **STEP 2** | Threat Modeling — STRIDE analysis, RBAC/mTLS/Vault/WAF/OPA controls, risk register | ✅ Done |
-| **STEP 3** | Architecture Design — HLD, LLD, DFD; multi-tenant isolation, KG+RAG, CE, SaaS+self-host | ✅ Done |
+| **STEP 3** | Architecture Design — HLD, LLD, DFD; multi-tenant isolation, KG+RAG, CE, SaaS+self-host | ✅ Done (Validated) |
 | **STEP 4** | Vendor Knowledge Agent implementation | 🔜 Pending |
 | **STEP 5** | Troubleshooting Agent implementation | 🔜 Pending |
 | **STEP 6** | Integration Agent implementation | 🔜 Pending |

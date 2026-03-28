@@ -1,8 +1,8 @@
 # IIVKIS High-Level Design (HLD)
 
 **Document ID:** IIVKIS-ARCH-001  
-**Version:** 1.0.0  
-**Status:** Approved — Phase 3 Baseline  
+**Version:** 1.0.1  
+**Status:** Validated — Phase 3 Validation Pass  
 **Phase:** STEP 3 — Architecture Design  
 **Author:** Architect Agent  
 **Date:** 2026-03-28  
@@ -13,6 +13,7 @@
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 1.0.0 | 2026-03-28 | Architect Agent | Initial HLD — system architecture, multi-tenant isolation tiers, SaaS + self-host deployment models, all major subsystems |
+| 1.0.1 | 2026-03-28 | Architect Agent | Phase 3 Validation — resolved 8 SPOFs: Vault Raft HA spec, Kafka RF/min-ISR, PostgreSQL HA topology, Redis cluster minimum, SPIRE Server HA + SVID caching, OPA fail-closed policy, DR failover automation, CE ML graceful degradation; notification delivery DLQ; feed ingestion scheduler HA |
 
 ---
 
@@ -142,15 +143,15 @@ The IIVKIS platform is composed of **five tiers**:
 | Correlation Engine | Node 18 + Python worker | Kubernetes Deployment | 3 |
 | Billing Engine | Node 18 | Kubernetes Deployment | 2 |
 | Notification Service | Node 18 | Kubernetes Deployment | 2 |
-| PostgreSQL | Managed (RDS/CloudSQL) | Stateful cluster | 4 |
-| Redis | Managed | Stateful cluster | 4 |
+| PostgreSQL | Managed (RDS Aurora Multi-AZ) | Aurora cluster (1 primary + 2 read replicas, auto-failover < 30 s) | 4 |
+| Redis | Managed (ElastiCache) | Redis 7 Cluster — min 3 master + 3 replica nodes (1 per AZ); self-hosted: Bitnami with sentinel | 4 |
 | Vector DB | pgvector (PostgreSQL extension) | Co-located with PG cluster | 4 |
 | Knowledge Graph | PostgreSQL (graph schema) | Co-located with PG cluster | 4 |
-| Message Queue | Apache Kafka | Stateful cluster | 4 |
-| Object Store | S3-compatible | Managed | 4 |
-| Vault | HashiCorp Vault | Stateful HA cluster | 5 |
-| OPA | Kubernetes sidecar | Per-pod | 5 |
-| SPIRE | Kubernetes DaemonSet | Node-level | 5 |
+| Message Queue | Apache Kafka | Strimzi/MSK cluster — RF=3, min-ISR=2, 3+ brokers (1 per AZ); KRaft mode (no ZooKeeper SPOF) | 4 |
+| Object Store | S3-compatible | Managed (S3 multi-region / MinIO distributed mode, ≥ 4 nodes) | 4 |
+| Vault | HashiCorp Vault 1.15 | Integrated Storage (Raft) — 3-node HA cluster (1 active + 2 standby); auto-unseal via AWS KMS / Azure Key Vault; services cache JWKS locally (15 min TTL) to survive short Vault outages | 5 |
+| OPA | Kubernetes sidecar | Per-pod; **fail-closed policy**: if OPA sidecar is unreachable, request is DENIED (default deny); policy bundles cached locally for 60 s to survive transient OPA restarts | 5 |
+| SPIRE | Kubernetes DaemonSet (Agent) + Deployment (Server) | SPIRE Server runs as a 3-replica Deployment with leader election; SPIRE Agent (DaemonSet) caches SVIDs with 1-hour TTL so pods survive SPIRE Server outages up to the SVID TTL | 5 |
 
 ---
 
@@ -220,8 +221,8 @@ decrypt tenant data without possessing the tenant's KEK.
 | Layer | Mechanism | Scope |
 |---|---|---|
 | Kubernetes NetworkPolicy | Deny-all default; explicit allow rules per service | Pod-to-pod |
-| mTLS (SPIFFE/SPIRE) | All internal service calls mutually authenticated | Service-to-service |
-| OPA Sidecar | Policy enforcement — RBAC + tenant isolation on every request | Request-level |
+| mTLS (SPIFFE/SPIRE) | All internal service calls mutually authenticated; SVID cached 1 h | Service-to-service |
+| OPA Sidecar | Policy enforcement — RBAC + tenant isolation on every request; **fail-closed**: OPA unreachable → deny request; policy bundle cached 60 s for transient restarts | Request-level |
 | Namespace Segregation (T3) | Kubernetes namespace per enterprise tenant | Kubernetes resource-level |
 
 ---
@@ -285,6 +286,11 @@ decrypt tenant data without possessing the tenant's KEK.
 - Zero-downtime deploys: rolling update strategy with PodDisruptionBudget
 - Managed services used where available (RDS Aurora PostgreSQL, ElastiCache Redis, MSK Kafka, S3)
 - Multi-AZ in primary region; cross-region active-passive DR (NFR-AVAIL-006)
+- **PostgreSQL HA:** Aurora Multi-AZ — 1 primary + 2 read replicas across 3 AZs; automatic failover < 30 s; PgBouncer connection pooler (Kubernetes Deployment, 3 replicas) to decouple connection counts from Aurora limits
+- **Kafka:** MSK cluster — 3 brokers (1 per AZ), `replication.factor=3`, `min.insync.replicas=2`, KRaft mode; MSK Connect for cross-region replication to DR cluster
+- **Redis:** ElastiCache Cluster Mode — 3 shards × 2 replicas = 6 nodes; Multi-AZ replication; automatic node failure replacement
+- **Vault:** 3-node Raft cluster (EKS Fargate, separate node group); auto-unseal via AWS KMS CMK; raft snapshots to S3 every 10 min; services read JWKS from local cache (15 min TTL) — Vault outage up to 15 min does not impact JWT verification
+- **DR failover automation:** Amazon Route 53 Application Recovery Controller (ARC) health checks monitor primary region endpoints; automatic DNS failover to secondary region within 60 s of primary region health-check failure; satisfies RTO < 1 h (NFR-AVAIL-003)
 
 ### 5.2 SaaS — Dedicated Tenant Cluster
 
@@ -468,6 +474,13 @@ LLM Gateway ──▶ LLM Provider (with retrieved context in prompt)
 Response + Citations (article IDs + source URLs)
 ```
 
+**Feed Ingestion Scheduler HA:** The feed collection scheduler runs as a Kubernetes
+`CronJob` (per-tenant) **plus** a continuous scheduler loop inside the VK Agent Deployment
+using leader-election (via a Kubernetes `Lease` resource). Only one VK Agent pod holds the
+leader lease at a time; if the leader pod crashes, another pod acquires the lease within
+15 seconds and resumes scheduling. This eliminates the single-scheduler SPOF without
+requiring a separate scheduler service.
+
 ### 6.4 Correlation Engine
 
 **Responsibility:** Ingest signals from all sources, apply rule-based and ML-based
@@ -532,6 +545,14 @@ Vendor Advis. ──▶│    ▼                                          │
 
 **Throughput design:** 10,000 signals/minute per tenant (FR-CE-003 / NFR-SCALE-004).
 Signal processors are stateless; horizontally scaled via KEDA on Kafka lag.
+
+**ML Correlator graceful degradation:** The Python ML worker is an optional contributor
+to the confidence vote. If the ML worker pod is unavailable (crash, scale-down, OOM),
+the Group Builder proceeds with votes from the four remaining processors (temporal,
+topological, semantic, rule). A `degraded` flag is set on the resulting correlation group
+and surfaced in the API response and Portal UI, alerting operators to the reduced
+confidence accuracy. The CE MUST NOT block on the ML worker; its timeout is capped at
+2,000 ms (configurable).
 
 ### 6.5 LLM Gateway
 
@@ -644,6 +665,8 @@ Event Sources ──▶ Notification Service
                      ├── Policy Engine: match event type to tenant channels
                      ├── Recipient validation (anti-misdirection check, FR-NOTIF-002)
                      ├── Channel adapters: Email (SES/SMTP), Slack, Teams, PD, Webhook
+                     ├── Delivery retry: exponential backoff (initial 5 s, max 5 retries, max delay 10 min)
+                     ├── Delivery DLQ: Kafka `notification.dlq` topic after all retries exhausted; on-call alert raised
                      └── Delivery receipt logging (audit trail)
 ```
 
@@ -787,3 +810,32 @@ GitOps customers.
 full-text search, re-ranked before LLM context assembly.  
 **Rationale:** Pure vector search misses structured relationships (product → advisory →
 patch). KG traversal provides precise structured lookups. Hybrid approach captures both.
+
+### ADR-006: OPA sidecar fail-closed policy
+
+**Status:** Accepted  
+**Context:** If an OPA sidecar crashes mid-flight, the request reaches the handler with
+no authorisation check. Options: fail-open (allow) or fail-closed (deny).  
+**Decision:** Fail-closed — if OPA is unreachable, the request MUST be denied with
+HTTP 503.  
+**Rationale:** Fail-open would bypass all tenant-isolation and RBAC checks, risking
+data leakage across tenants (TH-E-001). Fail-closed produces a recoverable service
+disruption rather than a silent security breach. OPA's local policy-bundle cache (60 s
+TTL) means transient container restarts are not visible to the application.  
+**Trade-offs:** Short OPA crash loops could cause elevated 503 rates; mitigated by
+PodDisruptionBudget and liveness-probe restart policy (restartPolicy: Always).
+
+### ADR-007: SPIRE Server HA and SVID caching
+
+**Status:** Accepted  
+**Context:** SPIRE provides all mTLS identities. A single SPIRE Server is a SPOF that
+would render all inter-service communication impossible if it went down.  
+**Decision:** SPIRE Server as a 3-replica Kubernetes Deployment with leader election
+(SPIRE native HA via Kubernetes CRD); SPIRE Agent (DaemonSet) caches SVIDs with a 1-hour
+TTL.  
+**Rationale:** (a) Three replicas survive a single node failure; (b) SVID caching at the
+Agent means pods continue to authenticate each other for up to 1 hour without contacting
+the SPIRE Server; (c) SPIRE Server outages of ≤ 60 min do not interrupt running services,
+only prevent new pod certificate issuance.  
+**Trade-offs:** SVID revocation during a SPIRE Server outage cannot take effect until the
+cache expires; acceptable risk as SVID TTL is 1 hour and revocation is a rare event.

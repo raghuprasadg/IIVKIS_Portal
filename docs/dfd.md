@@ -1,8 +1,8 @@
 # IIVKIS Data Flow Diagrams (DFD)
 
 **Document ID:** IIVKIS-ARCH-003  
-**Version:** 1.0.0  
-**Status:** Approved — Phase 3 Baseline  
+**Version:** 1.0.1  
+**Status:** Validated — Phase 3 Validation Pass  
 **Phase:** STEP 3 — Architecture Design  
 **Author:** Architect Agent  
 **Date:** 2026-03-28  
@@ -13,6 +13,7 @@
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 1.0.0 | 2026-03-28 | Architect Agent | Initial DFD set — L0 context diagram, L1 system decomposition, L2 per-subsystem: Vendor Knowledge + KG+RAG, Correlation Engine, LLM Gateway, Integration Agent, Authentication, Billing |
+| 1.0.1 | 2026-03-28 | Architect Agent | Phase 3 Validation — added L2 Analysis Agent DFD (§11); renumbered §11→§12 (Multi-Tenant Boundary Map), §12→§13 (Sequence Diagrams) |
 
 ---
 
@@ -28,11 +29,12 @@
 8. [L2 — Authentication & Session Flow](#8-l2--authentication--session-flow)
 9. [L2 — Billing & Usage Metering](#9-l2--billing--usage-metering)
 10. [L2 — Notification Flow](#10-l2--notification-flow)
-11. [Multi-Tenant Data Boundary Map](#11-multi-tenant-data-boundary-map)
-12. [Cross-Subsystem Sequence Diagrams](#12-cross-subsystem-sequence-diagrams)
-    - 12.1 [Incident Resolution Plan Generation](#121-incident-resolution-plan-generation)
-    - 12.2 [Signal Ingest → Correlation Group → Notification](#122-signal-ingest--correlation-group--notification)
-    - 12.3 [Semantic Knowledge Search (RAG)](#123-semantic-knowledge-search-rag)
+11. [L2 — Analysis Agent](#11-l2--analysis-agent)
+12. [Multi-Tenant Data Boundary Map](#12-multi-tenant-data-boundary-map)
+13. [Cross-Subsystem Sequence Diagrams](#13-cross-subsystem-sequence-diagrams)
+    - 13.1 [Incident Resolution Plan Generation](#131-incident-resolution-plan-generation)
+    - 13.2 [Signal Ingest → Correlation Group → Notification](#132-signal-ingest--correlation-group--notification)
+    - 13.3 [Semantic Knowledge Search (RAG)](#133-semantic-knowledge-search-rag)
 
 ---
 
@@ -648,7 +650,126 @@ Kafka topics:
 
 ---
 
-## 11. Multi-Tenant Data Boundary Map
+## 11. L2 — Analysis Agent
+
+The Analysis Agent produces dashboards, trend reports, anomaly detection runs, LLM
+narrative summaries, and SLA compliance metrics. It is triggered by the Orchestrator
+via Kafka and reads from PostgreSQL, Redis, and the billing ledger.
+
+### 11.1 Report Generation Flow
+
+```
+╔════════════════════════════════════════════════════════════════════╗
+║  Orchestrator                                                     ║
+╚══════════════════════════╤═════════════════════════════════════════╝
+                           │ Kafka: agent.anlys.requests
+                           │ taskType = 'anlys.report' | 'anlys.anomaly'
+                           ▼
+╔════════════════════════════════════════════════════════════════════╗
+║  Analysis Agent Consumer (KEDA auto-scaled on Kafka lag)          ║
+║                                                                   ║
+║  1. Validate tenant_id header against JWT (re-verify at boundary) ║
+║  2. Dispatch to sub-handler based on taskType                     ║
+╚══════════════════════════╤═════════════════════════════════════════╝
+                           │
+          ┌────────────────┼────────────────┐
+          ▼                ▼                ▼
+  [Report Handler]  [Anomaly Handler]  [Forecast Handler]
+```
+
+### 11.2 Report Handler Data Flow
+
+```
+╔════════════════════════════════════════════════════════╗
+║  Report Handler                                       ║
+╚══════════════════════╤═════════════════════════════════╝
+                       │
+       ┌───────────────┼─────────────────────────────┐
+       │               │                             │
+       ▼               ▼                             ▼
+┌ ─ DS-1 PG ─ ─ ─ ┐  ┌ ─ DS-1 PG ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┌ ─ DS-3 Redis ─ ─ ┐
+│ incidents table  │  │ usage_ledger (billing metrics)   │  │ real-time agg     │
+│ correlation_     │  │ correlation_groups (accuracy)    │  │ counters          │
+│  groups table    │  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+│ sla_policies     │
+└ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+       │               │                             │
+       └───────────────┴─────────────────────────────┘
+                               │ [aggregated metrics]
+                               ▼
+╔════════════════════════════════════════════════════════╗
+║  Metrics Aggregator                                   ║
+║  - Incident volume trend (daily/weekly/monthly)       ║
+║  - MTTR per severity, per product                     ║
+║  - Top affected products / vendors                    ║
+║  - SLA compliance rate per policy                     ║
+║  - LLM usage & cost attribution                       ║
+║  - Correlation accuracy (confirmed vs total groups)   ║
+╚══════════════════════╤═════════════════════════════════╝
+                       │ [report payload]
+                       ▼
+╔════════════════════════════════════════════════════════╗
+║  Optional: LLM Gateway (narrative summary)            ║──▶ ┌ DS-9 LLM Providers ┐
+║  taskType = 'llm.complete', cacheable = true          ║◀── └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+╚══════════════════════╤═════════════════════════════════╝
+                       │ [narrative text + structured report]
+                       ▼
+╔════════════════════════════════════════════════════════╗
+║  Result Publisher                                     ║
+║  - Publish to Kafka reply topic (correlated by taskId)║──▶ ┌ ─ ─ DS-4 Kafka ─ ─ ─ ┐
+║  - Persist report snapshot to S3 (time-series archive)║──▶ ┌ ─ ─ DS-5 S3 ─ ─ ─ ─ ┐
+║  - Emit OTel trace + report metrics                   ║    └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+╚════════════════════════════════════════════════════════╝    └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+```
+
+### 11.3 Anomaly Detection Flow
+
+```
+╔════════════════════════════════════════════════════════╗
+║  Anomaly Handler (taskType = 'anlys.anomaly')         ║
+╚══════════════════════╤═════════════════════════════════╝
+                       │
+       ┌───────────────┴───────────────┐
+       ▼                               ▼
+┌ ─ DS-1 PG ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┌ ─ DS-3 Redis ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+│ signals (last 30 days)        │  │ signal hot-store (last 1 h)        │
+│ incidents (last 30 days)      │  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+       │                               │
+       └───────────────┬───────────────┘
+                       │ [time series: signal counts, MTTR, volume by CI]
+                       ▼
+╔════════════════════════════════════════════════════════╗
+║  Statistical Anomaly Detector                         ║
+║  - Holt-Winters (triple exponential smoothing)        ║
+║  - Z-score on 7-day rolling baseline                  ║
+║  - Output: anomaly candidates [{ci, metric, score}]   ║
+╚══════════════════════╤═════════════════════════════════╝
+                       │ [anomaly candidates (if any)]
+                       ▼
+╔════════════════════════════════════════════════════════╗
+║  LLM Gateway — Narrative Generation (optional)        ║──▶ LLM Provider (TB-05)
+║  "Unusual spike in P1 incidents on product X vs       ║
+║   30-day baseline — possible upstream dependency"     ║
+╚══════════════════════╤═════════════════════════════════╝
+                       │ [anomaly report + narrative]
+               ┌───────┴────────┐
+               ▼                ▼
+        Kafka reply topic    Kafka: notification.events (if severity = HIGH)
+        (result to API)      → Notification Service → ops-engineer channels
+```
+
+### 11.4 Analysis Agent Kafka Topics
+
+| Topic | Direction | Consumers | Description |
+|---|---|---|---|
+| `agent.anlys.requests` | Inbound | Analysis Agent | Report / anomaly task dispatch from Orchestrator |
+| `agent.anlys.replies` | Outbound | Orchestrator | Task results (correlated by taskId) |
+| `notification.events` | Outbound | Notification Service | High-severity anomaly alerts |
+
+---
+
+## 12. Multi-Tenant Data Boundary Map
 
 This table maps each data store to the mechanism that prevents cross-tenant data leakage.
 
@@ -677,9 +798,9 @@ Four independent layers must all be bypassed simultaneously for a cross-tenant l
 
 ---
 
-## 12. Cross-Subsystem Sequence Diagrams
+## 13. Cross-Subsystem Sequence Diagrams
 
-### 12.1 Incident Resolution Plan Generation
+### 13.1 Incident Resolution Plan Generation
 
 ```
 IT Ops Engineer          Portal          API           Orchestrator     TS Agent      VK Agent      LLM Gateway
@@ -708,7 +829,7 @@ IT Ops Engineer          Portal          API           Orchestrator     TS Agent
        │                   │              │                   │               │               │               │
 ```
 
-### 12.2 Signal Ingest → Correlation Group → Notification
+### 13.2 Signal Ingest → Correlation Group → Notification
 
 ```
 External System   Integration Agent   Signal Ingestor   CE Processors   Group Builder   Notification Svc
@@ -738,7 +859,7 @@ External System   Integration Agent   Signal Ingestor   CE Processors   Group Bu
        │                 │                  │                   │               │                │─ delivery log
 ```
 
-### 12.3 Semantic Knowledge Search (RAG)
+### 13.3 Semantic Knowledge Search (RAG)
 
 ```
 IT Ops Engineer   Portal           API          VK Agent         pgvector (DS-2)   LLM Gateway
