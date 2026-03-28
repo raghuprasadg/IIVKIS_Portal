@@ -1,0 +1,25 @@
+{
+  "name": "@iivkis/agents-vendor-knowledge",
+  "version": "0.0.1",
+  "description": "IIVKIS Vendor Knowledge Agent — queries and enriches vendor/product data",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@iivkis/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  }
+}
