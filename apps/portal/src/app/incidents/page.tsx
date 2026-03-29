@@ -15,7 +15,7 @@ interface Incident {
 
 const ALL_INCIDENTS: Incident[] = [
   { id: 'INC-2401', title: 'ServiceNow API timeout cascade — connection pool exhausted', severity: 'critical', status: 'In Progress', assignee: 'JR', created: '2024-01-15 14:20', sla: { label: '1h 40m', variant: 'warn' }, source: 'ServiceNow' },
-  { id: 'INC-2398', title: 'Vault certificate renewal failure — vault-01', severity: 'high', status: 'Assigned', assignee: 'SK', created: '2024-01-15 13:58', sla: { label: '4h 02m', variant: 'ok' }, source: 'Vault' },
+  { id: 'INC-2398', title: 'Vault certificate renewal failure — vault-01', severity: 'high', status: 'In Progress', assignee: 'SK', created: '2024-01-15 13:58', sla: { label: '4h 02m', variant: 'ok' }, source: 'Vault' },
   { id: 'INC-2395', title: 'Neo4j query latency spike — p95 > 3s', severity: 'medium', status: 'Investigating', assignee: 'TL', created: '2024-01-15 13:00', sla: { label: '0h 48m', variant: 'breach' }, source: 'Prometheus' },
   { id: 'INC-2391', title: 'Grafana dashboard data gaps — metrics missing', severity: 'low', status: 'Monitoring', assignee: 'AM', created: '2024-01-15 12:00', sla: { label: '6h 00m', variant: 'ok' }, source: 'Grafana' },
   { id: 'INC-2388', title: 'Redis memory threshold exceeded — eviction triggered', severity: 'medium', status: 'Resolved', assignee: 'BW', created: '2024-01-15 11:30', sla: { label: 'Resolved', variant: 'ok' }, source: 'Redis' },

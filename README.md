@@ -77,4 +77,4 @@ npm run typecheck
 | **STEP 2** | Threat Model — STRIDE analysis, RBAC/mTLS/Vault/WAF/OPA controls | ✅ Done |
 | **STEP 3** | Architecture Design — HLD, LLD, DFD; multi-tenant isolation, KG+RAG, CE, SaaS+self-host | ✅ Done (Validated) |
 | **STEP 4** | Infrastructure Setup — docker-compose services, health validation | ✅ Done |
-| **STEP 5** | Vendor Knowledge Agent implementation | 🔜 Pending |
+| **STEP 5** | Core Development — API Gateway, Auth/Tenant, 16 CE processors, LLM Gateway, RAG, Connector SDK + 4 connectors, Glassmorphism UI | ✅ Done |
