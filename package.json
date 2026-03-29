@@ -2,7 +2,7 @@
   "name": "iivkis-portal",
   "version": "0.0.1",
   "private": true,
-  "description": "Intelligent IT Vendor Knowledge Integration System (IIVKIS) — monorepo root",
+  "description": "Intelligent IT Vendor Knowledge Integration System (IIVKIS) \u2014 monorepo root",
   "workspaces": [
     "apps/*",
     "packages/*",
@@ -15,7 +15,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "typecheck": "tsc --noEmit",
-    "validate:phase4": "node scripts/validate-phase4.mjs"
+    "validate:phase4": "node scripts/validate-phase4.mjs",
+    "test:phase8": "jest"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

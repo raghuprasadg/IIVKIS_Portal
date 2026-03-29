@@ -64,11 +64,11 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissionMap = {
     'orchestrator:invoke',
   ],
   operator: [
-    'incident:read', 'incident:write',
+    'incident:read', 'incident:write', 'incident:delete',
     'correlation:read', 'correlation:write',
     'knowledge:read',
     'chat:read', 'chat:write',
-    'integration:read', 'integration:write',
+    'integration:read', 'integration:write', 'integration:delete',
     'analytics:read',
     'orchestrator:invoke',
   ],

@@ -27,7 +27,7 @@ const config = {
     '!**/*.d.js',
   ],
 
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       lines: 80,
       functions: 80,
