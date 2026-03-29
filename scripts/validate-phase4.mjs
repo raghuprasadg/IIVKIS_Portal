@@ -147,7 +147,8 @@ async function validate() {
   console.log('='.repeat(55));
 
   if (passed === total) {
-    console.log(`\nRESULT: PASS — ${passed}/${total} services healthy\n`);
+    console.log(`\nRESULT: PASS — ${passed}/${total} services healthy`);
+    console.log(`\nNext Step 5\n`);
     process.exit(0);
   } else {
     console.log(`\nRESULT: FAIL — ${passed}/${total} services healthy\n`);
