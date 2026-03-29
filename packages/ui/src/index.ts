@@ -1,5 +1,5 @@
-/**
- * @iivkis/ui — public component API.
- * Full component implementation is deferred to subsequent development steps.
- */
 export * from './components/placeholder';
+export * from './components/GlassCard';
+export * from './components/StatusBadge';
+export * from './components/MetricCard';
+export * from './components/ConfidenceBar';
