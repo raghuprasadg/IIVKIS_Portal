@@ -6,9 +6,13 @@ import express, { type Request, type Response } from 'express';
 
 import { orchestrate } from './orchestrator';
 import { IntegrationPipeline } from './pipeline';
+import { FailoverChain } from './resiliency/failover';
+import { CircuitBreakerRegistry } from '@iivkis/shared';
 
 export { orchestrate } from './orchestrator';
 export { IntegrationPipeline } from './pipeline';
+export { dispatchWithResilience } from './resiliency/agent-retry';
+export { FailoverChain } from './resiliency/failover';
 
 const app = express();
 const PORT = process.env['PORT'] ?? 5000;
@@ -36,6 +40,14 @@ app.post('/pipeline/run', async (req: Request, res: Response) => {
   } catch (err) {
     res.status(500).json({ error: 'Pipeline failed', detail: String(err) });
   }
+});
+
+app.get('/health/failover', (_req: Request, res: Response) => {
+  res.json({
+    failoverChains: FailoverChain.status(),
+    circuitBreakers: CircuitBreakerRegistry.all(),
+    checkedAt: new Date().toISOString(),
+  });
 });
 
 app.listen(PORT, () => {

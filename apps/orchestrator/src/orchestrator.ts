@@ -18,6 +18,7 @@ import * as analysisAgent from '@iivkis/agents-analysis';
 import * as integrationAgent from '@iivkis/agents-integration';
 import * as vkAgent from '@iivkis/agents-vendor-knowledge';
 import * as tsAgent from '@iivkis/agents-troubleshooting';
+import { dispatchWithResilience } from './resiliency/agent-retry';
 
 export interface OrchestratorConfig {
   /** Maximum concurrent agent tasks */
@@ -109,24 +110,24 @@ export async function orchestrate(
       case 'vk.search':
       case 'vk.ingest':
       case 'vk.article.get':
-        return vkAgent.handle(request);
+        return dispatchWithResilience('agent-vendor-knowledge', vkAgent.handle, request);
 
       /* ── Troubleshooting routes ──────────────────────────────────────── */
       case 'ts.plan.generate':
       case 'ts.chat.turn':
-        return tsAgent.handle(request);
+        return dispatchWithResilience('agent-troubleshooting', tsAgent.handle, request);
 
       /* ── Integration routes ──────────────────────────────────────────── */
       case 'int.sync':
       case 'int.webhook.process':
-        return integrationAgent.handle(request);
+        return dispatchWithResilience('agent-integration', integrationAgent.handle, request);
 
       /* ── Analysis / Correlation routes ──────────────────────────────── */
       case 'anlys.report':
       case 'anlys.anomaly':
       case 'ce.signal.ingest':
       case 'ce.group.query':
-        return analysisAgent.handle(request);
+        return dispatchWithResilience('agent-analysis', analysisAgent.handle, request);
 
       default: {
         const unknown: string = (request as AgentRequest).taskType;

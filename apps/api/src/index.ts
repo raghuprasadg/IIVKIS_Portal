@@ -13,6 +13,8 @@ import { authMiddleware } from './middleware/auth';
 import { tenantMiddleware } from './middleware/tenant';
 import { rateLimitMiddleware } from './middleware/rate-limit';
 import { errorHandler } from './middleware/error-handler';
+import { wafMiddleware } from './middleware/waf';
+import { mtlsMiddleware } from './middleware/mtls';
 import { incidentRouter } from './routes/incidents';
 import { knowledgeRouter } from './routes/knowledge';
 import { correlationRouter } from './routes/correlation';
@@ -42,6 +44,10 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+
+// ── Security: WAF + mTLS (applied globally before auth) ───────────────────
+app.use(wafMiddleware);
+app.use(mtlsMiddleware);
 
 // ── Liveness ─────────────────────────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {
