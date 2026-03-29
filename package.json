@@ -18,12 +18,15 @@
     "validate:phase4": "node scripts/validate-phase4.mjs"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",
+    "jest": "^30.3.0",
     "prettier": "^3.2.5",
+    "ts-jest": "^29.4.6",
     "typescript": "^5.4.5"
   },
   "engines": {
