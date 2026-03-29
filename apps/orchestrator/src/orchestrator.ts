@@ -5,10 +5,16 @@
  *  - Receive task requests from the API layer
  *  - Route tasks to the appropriate agent(s)
  *  - Aggregate and return results
- *
- * Full implementation is deferred to subsequent development steps.
  */
-import type { AgentRequest, AgentResponse } from '@iivkis/shared';
+import type {
+  AgentRequest,
+  AgentResponse,
+  AgentError,
+  LLMCompletionRequest,
+  EmbeddingRequest,
+} from '@iivkis/shared';
+import { LLMGateway } from './llm-gateway';
+import type { LLMGatewayConfig } from './llm-gateway';
 
 export interface OrchestratorConfig {
   /** Maximum concurrent agent tasks */
@@ -22,6 +28,45 @@ const DEFAULT_CONFIG: OrchestratorConfig = {
   agentTimeoutMs: 30_000,
 };
 
+/* ── singleton gateway instance ─────────────────────────────────────────── */
+
+const GATEWAY_CONFIG: LLMGatewayConfig = {
+  defaultProvider: {
+    name: 'openai',
+    baseUrl: process.env['LLM_BASE_URL'] ?? 'https://api.openai.com/v1',
+    apiKey: process.env['LLM_API_KEY'] ?? '',
+  },
+  modelTierMap: {
+    fast: process.env['LLM_MODEL_FAST'] ?? 'gpt-4o-mini',
+    capable: process.env['LLM_MODEL_CAPABLE'] ?? 'gpt-4o',
+    auto: process.env['LLM_MODEL_AUTO'] ?? 'gpt-4o-mini',
+  },
+  maxBudgetTokensPerDay: Number(process.env['LLM_BUDGET_TOKENS_PER_DAY'] ?? 1_000_000),
+  cacheSimilarityThreshold: 0.97,
+};
+
+const gateway = new LLMGateway(GATEWAY_CONFIG);
+
+/* ── helpers ─────────────────────────────────────────────────────────────── */
+
+function degraded(request: AgentRequest, start: number, message: string): AgentResponse {
+  const error: AgentError = {
+    code: 'ORCHESTRATOR_ERROR',
+    message,
+    retryable: true,
+  };
+  return {
+    taskId: request.taskId,
+    status: 'degraded',
+    tenantId: request.tenantId,
+    error,
+    latencyMs: Date.now() - start,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+/* ── router ──────────────────────────────────────────────────────────────── */
+
 /**
  * Orchestrates a request across the relevant agents and returns
  * a consolidated response.
@@ -30,15 +75,85 @@ export async function orchestrate(
   request: AgentRequest,
   config: OrchestratorConfig = DEFAULT_CONFIG,
 ): Promise<AgentResponse> {
-  // TODO: Route to the correct agent based on request.taskType
   void config;
   const start = Date.now();
-  return {
-    taskId: request.taskId,
-    status: 'degraded',
-    tenantId: request.tenantId,
-    result: {},
-    latencyMs: Date.now() - start,
-    createdAt: new Date().toISOString(),
-  };
+
+  try {
+    switch (request.taskType) {
+      /* ── LLM Gateway routes ───────────────────────────────────────────── */
+      case 'llm.complete': {
+        const llmReq = request.payload as unknown as LLMCompletionRequest;
+        const resp = await gateway.complete({
+          ...llmReq,
+          taskId: request.taskId,
+          tenantId: request.tenantId,
+          userId: request.userId,
+        });
+        return {
+          taskId: request.taskId,
+          status: resp.content ? 'success' : 'degraded',
+          tenantId: request.tenantId,
+          result: resp as unknown as Record<string, unknown>,
+          modelUsed: resp.model,
+          tokensUsed: resp.tokensPrompt + resp.tokensCompletion,
+          latencyMs: Date.now() - start,
+          createdAt: new Date().toISOString(),
+        };
+      }
+
+      case 'llm.embed': {
+        const embedReq = request.payload as unknown as EmbeddingRequest;
+        const resp = await gateway.embed({
+          ...embedReq,
+          taskId: request.taskId,
+          tenantId: request.tenantId,
+        });
+        return {
+          taskId: request.taskId,
+          status: 'success',
+          tenantId: request.tenantId,
+          result: resp as unknown as Record<string, unknown>,
+          modelUsed: resp.model,
+          tokensUsed: resp.tokensUsed,
+          latencyMs: Date.now() - start,
+          createdAt: new Date().toISOString(),
+        };
+      }
+
+      /* ── Vendor Knowledge routes ─────────────────────────────────────── */
+      case 'vk.search':
+      case 'vk.ingest':
+      case 'vk.article.get': {
+        // Delegated to vendor-knowledge agent (handled by agent process / stub)
+        return degraded(request, start, `Task type ${request.taskType} requires vendor-knowledge agent.`);
+      }
+
+      /* ── Troubleshooting routes ──────────────────────────────────────── */
+      case 'ts.plan.generate':
+      case 'ts.chat.turn': {
+        return degraded(request, start, `Task type ${request.taskType} requires troubleshooting agent.`);
+      }
+
+      /* ── Integration routes ──────────────────────────────────────────── */
+      case 'int.sync':
+      case 'int.webhook.process': {
+        return degraded(request, start, `Task type ${request.taskType} requires integration agent.`);
+      }
+
+      /* ── Analysis / Correlation routes ──────────────────────────────── */
+      case 'anlys.report':
+      case 'anlys.anomaly':
+      case 'ce.signal.ingest':
+      case 'ce.group.query': {
+        return degraded(request, start, `Task type ${request.taskType} requires analysis agent.`);
+      }
+
+      default: {
+        const unknown: string = (request as AgentRequest).taskType;
+        return degraded(request, start, `Unknown task type: ${unknown}.`);
+      }
+    }
+  } catch (err) {
+    return degraded(request, start, err instanceof Error ? err.message : String(err));
+  }
 }
