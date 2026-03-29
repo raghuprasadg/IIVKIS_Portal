@@ -140,9 +140,12 @@ export function wafMiddleware(req: Request, res: Response, next: NextFunction): 
     }
   }
 
-  // 3. URL path and query string scan
+  // 3. URL path and query string scan (scan both raw and percent-decoded)
   const urlToScan = req.originalUrl;
-  const urlViolation = scanValue(urlToScan, 'url');
+  const urlDecoded = (() => {
+    try { return decodeURIComponent(urlToScan); } catch { return urlToScan; }
+  })();
+  const urlViolation = scanValue(urlToScan, 'url') ?? scanValue(urlDecoded, 'url');
   if (urlViolation) {
     rejectRequest(res, req, urlViolation);
     return;
