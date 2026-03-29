@@ -30,13 +30,15 @@ export async function orchestrate(
   request: AgentRequest,
   config: OrchestratorConfig = DEFAULT_CONFIG,
 ): Promise<AgentResponse> {
-  // TODO: Route to the correct agent based on request.type
+  // TODO: Route to the correct agent based on request.taskType
   void config;
+  const start = Date.now();
   return {
-    requestId: request.id,
-    agentId: 'orchestrator',
-    result: null,
-    status: 'pending',
-    timestamp: new Date().toISOString(),
+    taskId: request.taskId,
+    status: 'degraded',
+    tenantId: request.tenantId,
+    result: {},
+    latencyMs: Date.now() - start,
+    createdAt: new Date().toISOString(),
   };
 }

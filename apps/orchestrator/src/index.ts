@@ -2,7 +2,7 @@
  * IIVKIS Orchestrator — Entry point placeholder.
  * Full implementation is deferred to subsequent development steps.
  */
-import express from 'express';
+import express, { type Request, type Response } from 'express';
 
 import { orchestrate } from './orchestrator';
 
@@ -11,13 +11,13 @@ const PORT = process.env['PORT'] ?? 5000;
 
 app.use(express.json());
 
-app.get('/health', (_req, res) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', service: '@iivkis/orchestrator' });
 });
 
-app.post('/orchestrate', async (req, res) => {
+app.post('/orchestrate', async (req: Request, res: Response) => {
   try {
-    const result = await orchestrate(req.body);
+    const result = await orchestrate(req.body as Parameters<typeof orchestrate>[0]);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Orchestration failed', detail: String(err) });
