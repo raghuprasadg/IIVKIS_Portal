@@ -156,13 +156,22 @@ export abstract class BaseConnector implements ConnectorI {
     }, obj);
   }
 
-  /** Return true when the baseUrl signals a stub environment. */
+  /** Return true when the baseUrl signals a stub/test environment. */
   protected isStub(config: IntegrationConfig): boolean {
-    return (
-      config.baseUrl.includes('localhost') ||
-      config.baseUrl.includes('example.com') ||
-      config.baseUrl === ''
-    );
+    if (!config.baseUrl) return true;
+    try {
+      const { hostname } = new URL(config.baseUrl);
+      return (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '::1' ||
+        hostname === 'example.com' ||
+        hostname.endsWith('.example.com')
+      );
+    } catch {
+      // Unparseable URL → treat as stub to avoid sending to unknown hosts.
+      return true;
+    }
   }
 
   /** Build an empty SyncResult for stub / no-op responses. */
