@@ -46,3 +46,5 @@ infra/postgres/data/
 infra/neo4j/data/
 infra/vault/data/
 infra/grafana/data/
+packages/shared/dist
+apps/api/dist
