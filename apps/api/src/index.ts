@@ -5,13 +5,41 @@
  *  GET /health        — liveness probe (always 200 if process is running)
  *  GET /health/ready  — readiness probe (checks downstream service connectivity)
  *  GET /metrics       — Prometheus text-format metrics (basic process metrics)
+ *  /api/v1/*          — versioned REST API (auth-gated)
  */
 import express, { type Request, type Response } from 'express';
 import { createClient } from './infra/service-client';
+import { authMiddleware } from './middleware/auth';
+import { tenantMiddleware } from './middleware/tenant';
+import { rateLimitMiddleware } from './middleware/rate-limit';
+import { errorHandler } from './middleware/error-handler';
+import { incidentRouter } from './routes/incidents';
+import { knowledgeRouter } from './routes/knowledge';
+import { correlationRouter } from './routes/correlation';
+import { chatRouter } from './routes/chat';
+import { integrationRouter } from './routes/integrations';
+import { analyticsRouter } from './routes/analytics';
 
 const app = express();
 const PORT = process.env['PORT'] ?? 4000;
 const START_TIME = new Date().toISOString();
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
+const IS_PROD = process.env['NODE_ENV'] === 'production';
+const ALLOWED_ORIGINS = process.env['ALLOWED_ORIGINS']?.split(',').map((o) => o.trim()) ?? [];
+
+app.use((req, res, next) => {
+  const origin = req.headers['origin'] ?? '';
+  const allowed = IS_PROD ? ALLOWED_ORIGINS.includes(origin) : true;
+  if (allowed) {
+    res.setHeader('Access-Control-Allow-Origin', IS_PROD ? origin : '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Trace-Id');
+    res.setHeader('Access-Control-Max-Age', '86400');
+  }
+  if (req.method === 'OPTIONS') { res.status(204).send(); return; }
+  next();
+});
 
 app.use(express.json());
 
@@ -58,6 +86,19 @@ app.get('/metrics', (_req: Request, res: Response) => {
   res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
   res.send(lines.join('\n') + '\n');
 });
+
+// ── API v1 routes (all require auth + tenant RLS + rate limiting) ─────────────
+const apiAuth = [authMiddleware, tenantMiddleware, rateLimitMiddleware] as const;
+
+app.use('/api/v1/incidents', ...apiAuth, incidentRouter);
+app.use('/api/v1/knowledge', ...apiAuth, knowledgeRouter);
+app.use('/api/v1/correlation', ...apiAuth, correlationRouter);
+app.use('/api/v1/chat', ...apiAuth, chatRouter);
+app.use('/api/v1/integrations', ...apiAuth, integrationRouter);
+app.use('/api/v1/analytics', ...apiAuth, analyticsRouter);
+
+// ── Global error handler (must be last) ───────────────────────────────────────
+app.use(errorHandler);
 
 // ── Start ────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
