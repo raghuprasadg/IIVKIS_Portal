@@ -9,12 +9,15 @@
 import type {
   AgentRequest,
   AgentResponse,
-  AgentError,
   LLMCompletionRequest,
   EmbeddingRequest,
 } from '@iivkis/shared';
 import { LLMGateway } from './llm-gateway';
 import type { LLMGatewayConfig } from './llm-gateway';
+import * as analysisAgent from '@iivkis/agents-analysis';
+import * as integrationAgent from '@iivkis/agents-integration';
+import * as vkAgent from '@iivkis/agents-vendor-knowledge';
+import * as tsAgent from '@iivkis/agents-troubleshooting';
 
 export interface OrchestratorConfig {
   /** Maximum concurrent agent tasks */
@@ -46,24 +49,6 @@ const GATEWAY_CONFIG: LLMGatewayConfig = {
 };
 
 const gateway = new LLMGateway(GATEWAY_CONFIG);
-
-/* ── helpers ─────────────────────────────────────────────────────────────── */
-
-function degraded(request: AgentRequest, start: number, message: string): AgentResponse {
-  const error: AgentError = {
-    code: 'ORCHESTRATOR_ERROR',
-    message,
-    retryable: true,
-  };
-  return {
-    taskId: request.taskId,
-    status: 'degraded',
-    tenantId: request.tenantId,
-    error,
-    latencyMs: Date.now() - start,
-    createdAt: new Date().toISOString(),
-  };
-}
 
 /* ── router ──────────────────────────────────────────────────────────────── */
 
@@ -123,37 +108,54 @@ export async function orchestrate(
       /* ── Vendor Knowledge routes ─────────────────────────────────────── */
       case 'vk.search':
       case 'vk.ingest':
-      case 'vk.article.get': {
-        // Delegated to vendor-knowledge agent (handled by agent process / stub)
-        return degraded(request, start, `Task type ${request.taskType} requires vendor-knowledge agent.`);
-      }
+      case 'vk.article.get':
+        return vkAgent.handle(request);
 
       /* ── Troubleshooting routes ──────────────────────────────────────── */
       case 'ts.plan.generate':
-      case 'ts.chat.turn': {
-        return degraded(request, start, `Task type ${request.taskType} requires troubleshooting agent.`);
-      }
+      case 'ts.chat.turn':
+        return tsAgent.handle(request);
 
       /* ── Integration routes ──────────────────────────────────────────── */
       case 'int.sync':
-      case 'int.webhook.process': {
-        return degraded(request, start, `Task type ${request.taskType} requires integration agent.`);
-      }
+      case 'int.webhook.process':
+        return integrationAgent.handle(request);
 
       /* ── Analysis / Correlation routes ──────────────────────────────── */
       case 'anlys.report':
       case 'anlys.anomaly':
       case 'ce.signal.ingest':
-      case 'ce.group.query': {
-        return degraded(request, start, `Task type ${request.taskType} requires analysis agent.`);
-      }
+      case 'ce.group.query':
+        return analysisAgent.handle(request);
 
       default: {
         const unknown: string = (request as AgentRequest).taskType;
-        return degraded(request, start, `Unknown task type: ${unknown}.`);
+        return {
+          taskId: request.taskId,
+          status: 'failed',
+          tenantId: request.tenantId,
+          error: {
+            code: 'UNKNOWN_TASK_TYPE',
+            message: `Unknown task type: ${unknown}`,
+            retryable: false,
+          },
+          latencyMs: Date.now() - start,
+          createdAt: new Date().toISOString(),
+        };
       }
     }
   } catch (err) {
-    return degraded(request, start, err instanceof Error ? err.message : String(err));
+    return {
+      taskId: request.taskId,
+      status: 'failed',
+      tenantId: request.tenantId,
+      error: {
+        code: 'ORCHESTRATOR_ERROR',
+        message: err instanceof Error ? err.message : String(err),
+        retryable: true,
+      },
+      latencyMs: Date.now() - start,
+      createdAt: new Date().toISOString(),
+    };
   }
 }

@@ -42,6 +42,9 @@ export type {
   WebhookPayload,
 } from './connectors/types';
 
+export { NormalizationEngine } from './normalization/engine';
+export type { NormalizationResult, NormalizationTrace } from './normalization/engine';
+
 export const AGENT_ID = 'agent-integration' as const;
 
 /**

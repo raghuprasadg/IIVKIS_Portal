@@ -5,6 +5,10 @@
 import express, { type Request, type Response } from 'express';
 
 import { orchestrate } from './orchestrator';
+import { IntegrationPipeline } from './pipeline';
+
+export { orchestrate } from './orchestrator';
+export { IntegrationPipeline } from './pipeline';
 
 const app = express();
 const PORT = process.env['PORT'] ?? 5000;
@@ -21,6 +25,16 @@ app.post('/orchestrate', async (req: Request, res: Response) => {
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Orchestration failed', detail: String(err) });
+  }
+});
+
+app.post('/pipeline/run', async (req: Request, res: Response) => {
+  try {
+    const pipeline = new IntegrationPipeline();
+    const result = await pipeline.run(req.body as Parameters<IntegrationPipeline['run']>[0]);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Pipeline failed', detail: String(err) });
   }
 });
 

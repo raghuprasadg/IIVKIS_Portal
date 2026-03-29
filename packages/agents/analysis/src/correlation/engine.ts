@@ -52,10 +52,16 @@ export class CorrelationEngine {
 
   async process(ctx: ProcessorContext): Promise<{
     newGroups: CorrelationGroup[];
+    /** Maps group.id → signal internalId[] for evidence building. */
+    groupSignalMap: Map<string, string[]>;
+    /** Maps group.id → ordered evidence narrative strings. */
+    groupNarrativeMap: Map<string, string[]>;
     suppressedSignalIds: string[];
     processorLog: { name: string; groupsProposed: number; signalsSuppressed: number }[];
   }> {
     const newGroups: CorrelationGroup[] = [];
+    const groupSignalMap = new Map<string, string[]>();
+    const groupNarrativeMap = new Map<string, string[]>();
     const allSuppressed = new Set<string>();
     const processorLog: { name: string; groupsProposed: number; signalsSuppressed: number }[] = [];
 
@@ -67,17 +73,24 @@ export class CorrelationEngine {
 
       // Convert proposed groups to CorrelationGroup stubs
       const createdAt = runningCtx.now.toISOString();
-      const freshGroups: CorrelationGroup[] = result.proposedGroups.map(pg => ({
-        id: randomUUID(),
-        tenantId: runningCtx.tenantId,
-        status: 'proposed' as const,
-        confidence: Math.min(100, Math.max(0, pg.baseConfidence)),
-        ...(pg.rootCauseCiId !== undefined ? { rootCauseCiId: pg.rootCauseCiId } : {}),
-        ...(pg.narrative !== undefined ? { rootCauseNarrative: pg.narrative } : {}),
-        correlationMethods: [pg.correlationMethod],
-        createdAt,
-        updatedAt: createdAt,
-      }));
+      const freshGroups: CorrelationGroup[] = result.proposedGroups.map(pg => {
+        const id = randomUUID();
+        groupSignalMap.set(id, pg.signalIds);
+        if (pg.narrative !== undefined) {
+          groupNarrativeMap.set(id, [pg.narrative]);
+        }
+        return {
+          id,
+          tenantId: runningCtx.tenantId,
+          status: 'proposed' as const,
+          confidence: Math.min(100, Math.max(0, pg.baseConfidence)),
+          ...(pg.rootCauseCiId !== undefined ? { rootCauseCiId: pg.rootCauseCiId } : {}),
+          ...(pg.narrative !== undefined ? { rootCauseNarrative: pg.narrative } : {}),
+          correlationMethods: [pg.correlationMethod],
+          createdAt,
+          updatedAt: createdAt,
+        };
+      });
 
       // Apply confidence adjustments to groups already in runningCtx
       for (const [groupId, delta] of result.confidenceAdjustments.entries()) {
@@ -109,6 +122,8 @@ export class CorrelationEngine {
 
     return {
       newGroups,
+      groupSignalMap,
+      groupNarrativeMap,
       suppressedSignalIds: [...allSuppressed],
       processorLog,
     };

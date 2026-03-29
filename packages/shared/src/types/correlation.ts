@@ -51,6 +51,27 @@ export interface CorrelationGroup {
   resolvedAt?: string;
 }
 
+/**
+ * A correlation group enriched with the signals that form it and human-readable
+ * evidence narratives from each contributing processor.
+ *
+ * Returned by the CE pipeline for Phase 6 end-to-end validation.
+ */
+export interface CorrelatedGroupWithEvidence extends CorrelationGroup {
+  /** Ordered list of signal `internalId`s that belong to this group. */
+  signalIds: string[];
+  /**
+   * Per-processor narrative strings explaining why these signals were grouped.
+   * Example: "3 signals from 'zabbix' within 10 min window. Temporal score: 25."
+   */
+  evidenceNarratives: string[];
+  /**
+   * The full `Signal` objects for every signal in `signalIds`.
+   * Populated by the analysis agent when returning CE results to callers.
+   */
+  signals: Signal[];
+}
+
 /** Correlation rule DSL body (stored as JSONB in correlation_rules.dsl_body). */
 export interface CorrelationRuleDsl {
   name: string;

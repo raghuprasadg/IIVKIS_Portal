@@ -8,25 +8,39 @@
  *  - Generate analytics reports
  */
 import { createHash } from 'crypto';
-import type { AgentRequest, AgentResponse, Signal } from '@iivkis/shared';
+import type { AgentRequest, AgentResponse, Signal, CorrelatedGroupWithEvidence } from '@iivkis/shared';
 import { CorrelationEngine } from './correlation/index.js';
 import type { EnrichedSignal, ProcessorContext } from './correlation/index.js';
+import { KGService } from './kg/service.js';
 
 export * from './correlation/index.js';
+export { KGService } from './kg/service.js';
 
 export const AGENT_ID = 'agent-analysis' as const;
+
+const kgService = new KGService();
 
 function fingerprintSignal(signal: Signal): string {
   const raw = `${signal.sourceSystem}|${signal.affectedCiId ?? ''}|${signal.title}`;
   return createHash('sha256').update(raw).digest('hex');
 }
 
-function enrichSignals(signals: Signal[]): EnrichedSignal[] {
-  return signals.map((s, idx) => ({
-    ...s,
-    internalId: `sig-${idx}-${fingerprintSignal(s).slice(0, 8)}`,
-    fingerprint: fingerprintSignal(s),
-  }));
+async function enrichSignals(signals: Signal[]): Promise<EnrichedSignal[]> {
+  // Collect unique CI IDs so we can batch-fetch topology in one call
+  const ciIds = signals
+    .map(s => s.affectedCiId)
+    .filter((id): id is string => id !== undefined);
+  const topoMap = await kgService.batchGetTopologyInfo(ciIds);
+
+  return signals.map((s, idx) => {
+    const topo = s.affectedCiId ? topoMap.get(s.affectedCiId) : undefined;
+    return {
+      ...s,
+      internalId: `sig-${idx}-${fingerprintSignal(s).slice(0, 8)}`,
+      fingerprint: fingerprintSignal(s),
+      ...(topo !== undefined && { topologyDepth: topo.topologyDepth }),
+    };
+  });
 }
 
 /**
@@ -37,7 +51,7 @@ export async function handle(request: AgentRequest): Promise<AgentResponse> {
 
   if (request.taskType === 'ce.signal.ingest') {
     const rawSignals = (request.payload['signals'] ?? []) as Signal[];
-    const enriched = enrichSignals(rawSignals);
+    const enriched = await enrichSignals(rawSignals);
 
     const ctx: ProcessorContext = {
       tenantId: request.tenantId,
@@ -50,13 +64,27 @@ export async function handle(request: AgentRequest): Promise<AgentResponse> {
 
     try {
       const engine = new CorrelationEngine();
-      const { newGroups, suppressedSignalIds, processorLog } = await engine.process(ctx);
+      const { newGroups, groupSignalMap, groupNarrativeMap, suppressedSignalIds, processorLog } =
+        await engine.process(ctx);
+
+      // Build evidence-rich groups for the response
+      const signalIndex = new Map(enriched.map(s => [s.internalId, s]));
+      const groupsWithEvidence: CorrelatedGroupWithEvidence[] = newGroups.map(group => ({
+        ...group,
+        signalIds: groupSignalMap.get(group.id) ?? [],
+        evidenceNarratives: groupNarrativeMap.get(group.id) ?? [],
+        // Attach the actual Signal objects for caller convenience
+        signals: (groupSignalMap.get(group.id) ?? [])
+          .map(sid => signalIndex.get(sid))
+          .filter((s): s is EnrichedSignal => s !== undefined),
+      }));
+
       return {
         taskId: request.taskId,
         status: 'success',
         tenantId: request.tenantId,
         result: {
-          groups: newGroups,
+          groups: groupsWithEvidence,
           suppressedSignalIds,
           processorLog,
         },
