@@ -8,7 +8,7 @@
  *
  * Full implementation is deferred to subsequent development steps.
  */
-import type { AgentRequest, AgentResponse, ResolutionPlan } from '@iivkis/shared';
+import type { AgentRequest, AgentResponse } from '@iivkis/shared';
 
 export const AGENT_ID = 'agent-troubleshooting' as const;
 
@@ -17,12 +17,14 @@ export const AGENT_ID = 'agent-troubleshooting' as const;
  */
 export async function handle(request: AgentRequest): Promise<AgentResponse> {
   // TODO: Implement resolution plan generation
+  const start = Date.now();
   void request;
   return {
-    requestId: request.id,
-    agentId: AGENT_ID,
-    result: null as ResolutionPlan | null,
-    status: 'pending',
-    timestamp: new Date().toISOString(),
+    taskId: request.taskId,
+    status: 'degraded',
+    tenantId: request.tenantId,
+    result: {},
+    latencyMs: Date.now() - start,
+    createdAt: new Date().toISOString(),
   };
 }

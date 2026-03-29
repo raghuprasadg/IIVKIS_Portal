@@ -17,12 +17,14 @@ export const AGENT_ID = 'agent-analysis' as const;
  */
 export async function handle(request: AgentRequest): Promise<AgentResponse> {
   // TODO: Implement analytics and trend analysis
+  const start = Date.now();
   void request;
   return {
-    requestId: request.id,
-    agentId: AGENT_ID,
-    result: null,
-    status: 'pending',
-    timestamp: new Date().toISOString(),
+    taskId: request.taskId,
+    status: 'degraded',
+    tenantId: request.tenantId,
+    result: {},
+    latencyMs: Date.now() - start,
+    createdAt: new Date().toISOString(),
   };
 }
