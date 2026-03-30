@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "tenantId": "tenant-uat",
+    "collectedAt": "2026-01-15T10:30:00Z",
+    "intervalSeconds": 60,
+    "description": "UAT demo metrics — 90-minute window covering the cascade degradation event (2026-01-15 08:00–10:30 UTC)"
+  },
+  "series": [
+    {
+      "name": "cpu_usage_percent",
+      "unit": "%",
+      "labels": { "host": "prod-gw-01", "service": "integration-gateway" },
+      "datapoints": [
+        { "ts": "2026-01-15T08:00:00Z", "value": 34 },
+        { "ts": "2026-01-15T08:10:00Z", "value": 38 },
+        { "ts": "2026-01-15T08:20:00Z", "value": 44 },
+        { "ts": "2026-01-15T08:30:00Z", "value": 53 },
+        { "ts": "2026-01-15T08:40:00Z", "value": 89 },
+        { "ts": "2026-01-15T08:42:00Z", "value": 97 },
+        { "ts": "2026-01-15T08:50:00Z", "value": 96 },
+        { "ts": "2026-01-15T09:00:00Z", "value": 88 },
+        { "ts": "2026-01-15T09:10:00Z", "value": 72 },
+        { "ts": "2026-01-15T09:20:00Z", "value": 61 },
+        { "ts": "2026-01-15T09:30:00Z", "value": 48 },
+        { "ts": "2026-01-15T10:00:00Z", "value": 41 },
+        { "ts": "2026-01-15T10:30:00Z", "value": 36 }
+      ]
+    },
+    {
+      "name": "memory_usage_percent",
+      "unit": "%",
+      "labels": { "host": "redis-cluster-prod", "service": "redis" },
+      "datapoints": [
+        { "ts": "2026-01-15T06:00:00Z", "value": 62 },
+        { "ts": "2026-01-15T07:00:00Z", "value": 71 },
+        { "ts": "2026-01-15T08:00:00Z", "value": 79 },
+        { "ts": "2026-01-15T08:30:00Z", "value": 87 },
+        { "ts": "2026-01-15T09:00:00Z", "value": 93 },
+        { "ts": "2026-01-15T09:05:00Z", "value": 99 },
+        { "ts": "2026-01-15T09:06:00Z", "value": 41 },
+        { "ts": "2026-01-15T09:10:00Z", "value": 43 },
+        { "ts": "2026-01-15T09:30:00Z", "value": 55 },
+        { "ts": "2026-01-15T10:00:00Z", "value": 61 },
+        { "ts": "2026-01-15T10:30:00Z", "value": 64 }
+      ]
+    },
+    {
+      "name": "http_request_latency_p99_ms",
+      "unit": "ms",
+      "labels": { "host": "api-prod", "service": "iivkis-api", "route": "/api/v1/correlation" },
+      "datapoints": [
+        { "ts": "2026-01-15T08:00:00Z", "value": 145 },
+        { "ts": "2026-01-15T08:10:00Z", "value": 162 },
+        { "ts": "2026-01-15T08:20:00Z", "value": 210 },
+        { "ts": "2026-01-15T08:30:00Z", "value": 380 },
+        { "ts": "2026-01-15T08:40:00Z", "value": 1840 },
+        { "ts": "2026-01-15T08:42:00Z", "value": 8200 },
+        { "ts": "2026-01-15T08:50:00Z", "value": 12500 },
+        { "ts": "2026-01-15T09:00:00Z", "value": 45321 },
+        { "ts": "2026-01-15T09:10:00Z", "value": 22100 },
+        { "ts": "2026-01-15T09:20:00Z", "value": 8900 },
+        { "ts": "2026-01-15T09:30:00Z", "value": 3200 },
+        { "ts": "2026-01-15T10:00:00Z", "value": 560 },
+        { "ts": "2026-01-15T10:30:00Z", "value": 178 }
+      ]
+    },
+    {
+      "name": "http_error_rate_5xx",
+      "unit": "ratio",
+      "labels": { "host": "api-prod", "service": "iivkis-api" },
+      "datapoints": [
+        { "ts": "2026-01-15T08:00:00Z", "value": 0.001 },
+        { "ts": "2026-01-15T08:10:00Z", "value": 0.002 },
+        { "ts": "2026-01-15T08:30:00Z", "value": 0.008 },
+        { "ts": "2026-01-15T08:40:00Z", "value": 0.042 },
+        { "ts": "2026-01-15T08:42:00Z", "value": 0.18 },
+        { "ts": "2026-01-15T09:00:00Z", "value": 0.37 },
+        { "ts": "2026-01-15T09:10:00Z", "value": 0.29 },
+        { "ts": "2026-01-15T09:20:00Z", "value": 0.14 },
+        { "ts": "2026-01-15T09:30:00Z", "value": 0.05 },
+        { "ts": "2026-01-15T10:00:00Z", "value": 0.009 },
+        { "ts": "2026-01-15T10:30:00Z", "value": 0.001 }
+      ]
+    },
+    {
+      "name": "neo4j_query_duration_p95_ms",
+      "unit": "ms",
+      "labels": { "host": "knowledge-graph-prod", "service": "neo4j" },
+      "datapoints": [
+        { "ts": "2026-01-15T06:00:00Z", "value": 280 },
+        { "ts": "2026-01-15T06:30:00Z", "value": 310 },
+        { "ts": "2026-01-15T06:55:00Z", "value": 3421 },
+        { "ts": "2026-01-15T07:00:00Z", "value": 3890 },
+        { "ts": "2026-01-15T07:30:00Z", "value": 4100 },
+        { "ts": "2026-01-15T08:00:00Z", "value": 3600 },
+        { "ts": "2026-01-15T08:30:00Z", "value": 2900 },
+        { "ts": "2026-01-15T09:00:00Z", "value": 2100 },
+        { "ts": "2026-01-15T10:00:00Z", "value": 870 },
+        { "ts": "2026-01-15T10:30:00Z", "value": 295 }
+      ]
+    },
+    {
+      "name": "correlation_engine_signal_throughput",
+      "unit": "signals/min",
+      "labels": { "host": "ce-worker-cluster", "service": "correlation-engine" },
+      "datapoints": [
+        { "ts": "2026-01-15T08:00:00Z", "value": 1980 },
+        { "ts": "2026-01-15T08:30:00Z", "value": 1950 },
+        { "ts": "2026-01-15T09:00:00Z", "value": 1850 },
+        { "ts": "2026-01-15T10:00:00Z", "value": 1920 },
+        { "ts": "2026-01-15T10:05:00Z", "value": 510 },
+        { "ts": "2026-01-15T10:10:00Z", "value": 498 },
+        { "ts": "2026-01-15T10:20:00Z", "value": 505 },
+        { "ts": "2026-01-15T10:30:00Z", "value": 1840 }
+      ]
+    },
+    {
+      "name": "llm_embedding_latency_p99_ms",
+      "unit": "ms",
+      "labels": { "host": "llm-gpu-01", "service": "llm-gateway", "operation": "embed" },
+      "datapoints": [
+        { "ts": "2026-01-15T08:00:00Z", "value": 820 },
+        { "ts": "2026-01-15T09:00:00Z", "value": 1100 },
+        { "ts": "2026-01-15T09:30:00Z", "value": 2900 },
+        { "ts": "2026-01-15T09:45:00Z", "value": 8400 },
+        { "ts": "2026-01-15T09:50:00Z", "value": 9100 },
+        { "ts": "2026-01-15T10:00:00Z", "value": 8700 },
+        { "ts": "2026-01-15T10:15:00Z", "value": 5200 },
+        { "ts": "2026-01-15T10:30:00Z", "value": 1900 }
+      ]
+    },
+    {
+      "name": "postgres_replication_lag_seconds",
+      "unit": "s",
+      "labels": { "host": "pg-replica-03", "service": "postgres", "primary": "pg-primary-01" },
+      "datapoints": [
+        { "ts": "2026-01-15T07:00:00Z", "value": 1 },
+        { "ts": "2026-01-15T07:05:00Z", "value": 3 },
+        { "ts": "2026-01-15T07:10:00Z", "value": 87 },
+        { "ts": "2026-01-15T07:15:00Z", "value": 91 },
+        { "ts": "2026-01-15T07:20:00Z", "value": 78 },
+        { "ts": "2026-01-15T07:30:00Z", "value": 42 },
+        { "ts": "2026-01-15T07:45:00Z", "value": 15 },
+        { "ts": "2026-01-15T08:00:00Z", "value": 2 }
+      ]
+    },
+    {
+      "name": "active_incidents_count",
+      "unit": "count",
+      "labels": { "tenantId": "tenant-uat", "service": "iivkis-api" },
+      "datapoints": [
+        { "ts": "2026-01-15T08:00:00Z", "value": 3 },
+        { "ts": "2026-01-15T08:30:00Z", "value": 4 },
+        { "ts": "2026-01-15T09:00:00Z", "value": 7 },
+        { "ts": "2026-01-15T09:15:00Z", "value": 8 },
+        { "ts": "2026-01-15T09:30:00Z", "value": 9 },
+        { "ts": "2026-01-15T10:00:00Z", "value": 9 },
+        { "ts": "2026-01-15T10:30:00Z", "value": 7 }
+      ]
+    },
+    {
+      "name": "correlation_groups_count",
+      "unit": "count",
+      "labels": { "tenantId": "tenant-uat", "service": "correlation-engine" },
+      "datapoints": [
+        { "ts": "2026-01-15T08:00:00Z", "value": 1 },
+        { "ts": "2026-01-15T08:42:00Z", "value": 2 },
+        { "ts": "2026-01-15T09:06:00Z", "value": 3 },
+        { "ts": "2026-01-15T09:30:00Z", "value": 4 },
+        { "ts": "2026-01-15T10:30:00Z", "value": 4 }
+      ]
+    }
+  ]
+}

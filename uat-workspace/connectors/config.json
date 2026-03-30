@@ -1,0 +1,174 @@
+{
+  "version": "1.0.0",
+  "description": "UAT mock connector configurations — pre-wired for demo testing without live credentials",
+  "tenantId": "tenant-uat",
+  "connectors": [
+    {
+      "id": "conn-servicenow",
+      "name": "ServiceNow (Mock)",
+      "type": "itsm",
+      "vendor": "ServiceNow",
+      "enabled": true,
+      "mode": "mock",
+      "baseUrl": "http://mock-servicenow:8080",
+      "authType": "oauth2_client_credentials",
+      "credentials": {
+        "clientId": "uat-client-id",
+        "clientSecret": "__MOCK__",
+        "tokenEndpoint": "http://mock-servicenow:8080/oauth/token",
+        "scopes": ["incident.read", "incident.write", "cmdb.read"]
+      },
+      "fieldMapping": {
+        "incidentId": "number",
+        "title": "short_description",
+        "description": "description",
+        "severity": "priority",
+        "status": "state",
+        "assignee": "assigned_to",
+        "affectedCi": "cmdb_ci",
+        "occurredAt": "opened_at"
+      },
+      "webhookReceivePath": "/integrations/webhook/servicenow",
+      "syncIntervalSeconds": 300,
+      "capabilities": ["ingest_incidents", "create_incident", "update_incident", "query_cmdb"],
+      "healthCheckUrl": "http://mock-servicenow:8080/health",
+      "status": "healthy",
+      "lastSyncAt": "2026-01-15T10:00:00Z"
+    },
+    {
+      "id": "conn-pagerduty",
+      "name": "PagerDuty (Mock)",
+      "type": "alerting",
+      "vendor": "PagerDuty",
+      "enabled": true,
+      "mode": "mock",
+      "baseUrl": "http://mock-pagerduty:8081",
+      "authType": "api_key",
+      "credentials": {
+        "apiKey": "__MOCK__"
+      },
+      "fieldMapping": {
+        "incidentId": "id",
+        "title": "title",
+        "severity": "urgency",
+        "status": "status",
+        "assignee": "assignments[0].assignee.name",
+        "occurredAt": "created_at"
+      },
+      "webhookReceivePath": "/integrations/webhook/pagerduty",
+      "syncIntervalSeconds": 60,
+      "capabilities": ["ingest_alerts", "acknowledge_alert", "resolve_alert", "create_escalation"],
+      "healthCheckUrl": "http://mock-pagerduty:8081/health",
+      "status": "healthy",
+      "lastSyncAt": "2026-01-15T10:25:00Z"
+    },
+    {
+      "id": "conn-prometheus",
+      "name": "Prometheus (Mock)",
+      "type": "metrics",
+      "vendor": "Prometheus / Grafana",
+      "enabled": true,
+      "mode": "mock",
+      "baseUrl": "http://mock-prometheus:9090",
+      "authType": "basic",
+      "credentials": {
+        "username": "uat",
+        "password": "__MOCK__"
+      },
+      "fieldMapping": {
+        "metric": "__name__",
+        "value": "value",
+        "labels": "labels",
+        "timestamp": "timestamp"
+      },
+      "syncIntervalSeconds": 60,
+      "capabilities": ["ingest_metrics", "query_metrics", "list_alerts", "silence_alert"],
+      "healthCheckUrl": "http://mock-prometheus:9090/-/healthy",
+      "status": "healthy",
+      "lastSyncAt": "2026-01-15T10:29:00Z"
+    },
+    {
+      "id": "conn-jira",
+      "name": "Jira Software (Mock)",
+      "type": "project_management",
+      "vendor": "Atlassian",
+      "enabled": true,
+      "mode": "mock",
+      "baseUrl": "http://mock-jira:8082",
+      "authType": "basic",
+      "credentials": {
+        "email": "uat@example.com",
+        "apiToken": "__MOCK__"
+      },
+      "fieldMapping": {
+        "issueId": "key",
+        "title": "fields.summary",
+        "description": "fields.description",
+        "status": "fields.status.name",
+        "assignee": "fields.assignee.displayName",
+        "occurredAt": "fields.created"
+      },
+      "webhookReceivePath": "/integrations/webhook/jira",
+      "syncIntervalSeconds": 300,
+      "capabilities": ["ingest_issues", "create_issue", "update_issue", "link_issue"],
+      "healthCheckUrl": "http://mock-jira:8082/rest/api/3/serverInfo",
+      "status": "healthy",
+      "lastSyncAt": "2026-01-15T09:55:00Z"
+    },
+    {
+      "id": "conn-grafana",
+      "name": "Grafana (Mock)",
+      "type": "observability",
+      "vendor": "Grafana Labs",
+      "enabled": true,
+      "mode": "mock",
+      "baseUrl": "http://mock-grafana:3001",
+      "authType": "api_key",
+      "credentials": {
+        "apiKey": "__MOCK__"
+      },
+      "fieldMapping": {
+        "alertId": "id",
+        "title": "name",
+        "severity": "severity",
+        "status": "state",
+        "panelUrl": "url",
+        "occurredAt": "activeAt"
+      },
+      "webhookReceivePath": "/integrations/webhook/grafana",
+      "syncIntervalSeconds": 60,
+      "capabilities": ["ingest_alerts", "acknowledge_alert", "resolve_alert", "get_panel_image"],
+      "healthCheckUrl": "http://mock-grafana:3001/api/health",
+      "status": "healthy",
+      "lastSyncAt": "2026-01-15T10:28:00Z"
+    },
+    {
+      "id": "conn-datadog",
+      "name": "Datadog (Mock)",
+      "type": "apm_monitoring",
+      "vendor": "Datadog",
+      "enabled": true,
+      "mode": "mock",
+      "baseUrl": "http://mock-datadog:8083",
+      "authType": "api_key",
+      "credentials": {
+        "apiKey": "__MOCK__",
+        "appKey": "__MOCK__"
+      },
+      "fieldMapping": {
+        "alertId": "id",
+        "title": "name",
+        "severity": "priority",
+        "status": "overall_state",
+        "affectedHosts": "matching_downtimes",
+        "occurredAt": "created"
+      },
+      "webhookReceivePath": "/integrations/webhook/datadog",
+      "syncIntervalSeconds": 60,
+      "capabilities": ["ingest_monitors", "acknowledge_monitor", "mute_monitor", "query_logs", "query_traces"],
+      "healthCheckUrl": "http://mock-datadog:8083/api/v1/validate",
+      "status": "healthy",
+      "lastSyncAt": "2026-01-15T10:27:00Z"
+    }
+  ]
+}

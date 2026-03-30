@@ -1,0 +1,152 @@
+[
+  {
+    "signalType": "monitoring_alert",
+    "sourceSystem": "prometheus",
+    "affectedCiId": "prod-gw-01",
+    "severity": "critical",
+    "title": "HTTP connection pool exhausted on prod-gw-01",
+    "description": "activeConnections=512 (max) queuedRequests=318",
+    "occurredAt": "2026-01-15T08:42:00Z",
+    "rawPayload": { "metric": "http_connections_active", "value": 512, "threshold": 512 }
+  },
+  {
+    "signalType": "monitoring_alert",
+    "sourceSystem": "prometheus",
+    "affectedCiId": "prod-gw-01",
+    "severity": "high",
+    "title": "Circuit breaker OPEN — servicenow-api on prod-gw-01",
+    "description": "failureRate=0.73 threshold=0.50",
+    "occurredAt": "2026-01-15T08:42:05Z",
+    "rawPayload": { "metric": "circuit_breaker_state", "value": "OPEN" }
+  },
+  {
+    "signalType": "incident",
+    "sourceSystem": "servicenow",
+    "affectedCiId": "prod-gw-01",
+    "severity": "critical",
+    "title": "ServiceNow API gateway timeout cascade",
+    "description": "P1 incident — connection pool exhausted on prod-gw-01",
+    "occurredAt": "2026-01-15T08:43:00Z",
+    "rawPayload": { "incidentId": "INC-3001", "priority": "P1" }
+  },
+  {
+    "signalType": "monitoring_alert",
+    "sourceSystem": "prometheus",
+    "affectedCiId": "pg-replica-03",
+    "severity": "high",
+    "title": "PostgreSQL replication lag 87 s on pg-replica-03",
+    "description": "Replication lag threshold exceeded: 87s > 30s",
+    "occurredAt": "2026-01-15T07:10:00Z",
+    "rawPayload": { "metric": "postgres_replication_lag_seconds", "value": 87, "threshold": 30 }
+  },
+  {
+    "signalType": "monitoring_alert",
+    "sourceSystem": "prometheus",
+    "affectedCiId": "redis-cluster-prod",
+    "severity": "critical",
+    "title": "Redis OOM — node redis-03 at 99% memory",
+    "description": "OOM condition on redis-cluster-prod; eviction storm imminent",
+    "occurredAt": "2026-01-15T09:05:00Z",
+    "rawPayload": { "metric": "redis_memory_used_ratio", "value": 0.99, "threshold": 0.90 }
+  },
+  {
+    "signalType": "incident",
+    "sourceSystem": "servicenow",
+    "affectedCiId": "redis-cluster-prod",
+    "severity": "critical",
+    "title": "Redis eviction storm — 18422 keys evicted in 10 s",
+    "description": "Hot-key miss rate jumped to 41 % after eviction",
+    "occurredAt": "2026-01-15T09:05:15Z",
+    "rawPayload": { "incidentId": "INC-3006", "priority": "P1" }
+  },
+  {
+    "signalType": "monitoring_alert",
+    "sourceSystem": "prometheus",
+    "affectedCiId": "llm-gpu-01",
+    "severity": "high",
+    "title": "LLM embedding P99 latency 8.4 s — exceeds 5 s SLO",
+    "description": "GPU node overloaded by re-indexing job running without rate limits",
+    "occurredAt": "2026-01-15T09:45:00Z",
+    "rawPayload": { "metric": "llm_embedding_latency_p99_ms", "value": 8400, "slo": 5000 }
+  },
+  {
+    "signalType": "incident",
+    "sourceSystem": "pagerduty",
+    "affectedCiId": "llm-gpu-01",
+    "severity": "high",
+    "title": "LLM gateway latency breach — P1 escalated",
+    "description": "Embedding queue depth 842 / max 200; shedding requests",
+    "occurredAt": "2026-01-15T09:47:00Z",
+    "rawPayload": { "incidentId": "INC-3010", "priority": "P1" }
+  },
+  {
+    "signalType": "log_anomaly",
+    "sourceSystem": "datadog",
+    "affectedCiId": "worker-node-07",
+    "severity": "critical",
+    "title": "OOM kill: containerd-shim on worker-node-07",
+    "description": "Node entering NotReady; 14 pods rescheduling",
+    "occurredAt": "2026-01-15T10:10:05Z",
+    "rawPayload": { "pid": 28491, "victim": "llm-embedding-sidecar" }
+  },
+  {
+    "signalType": "incident",
+    "sourceSystem": "datadog",
+    "affectedCiId": "worker-node-07",
+    "severity": "critical",
+    "title": "Kubernetes node NotReady — worker-node-07",
+    "description": "OOM kill terminated containerd-shim; pod disruption budget violated",
+    "occurredAt": "2026-01-15T10:10:12Z",
+    "rawPayload": { "incidentId": "INC-3015", "priority": "P1" }
+  },
+  {
+    "signalType": "monitoring_alert",
+    "sourceSystem": "prometheus",
+    "affectedCiId": "ce-worker-cluster",
+    "severity": "high",
+    "title": "CE signal throughput dropped 75 % — debug_serial_mode=true",
+    "description": "Processing 500 signals/min vs target 2000",
+    "occurredAt": "2026-01-15T10:05:00Z",
+    "rawPayload": { "metric": "ce_signal_throughput", "value": 500, "target": 2000 }
+  },
+  {
+    "signalType": "monitoring_alert",
+    "sourceSystem": "prometheus",
+    "affectedCiId": "knowledge-graph-prod",
+    "severity": "medium",
+    "title": "Neo4j p95 query latency 3.4 s — unbounded Cypher traversal",
+    "description": "Multi-hop query without depth limit introduced in vk-agent v1.8.2",
+    "occurredAt": "2026-01-15T06:55:00Z",
+    "rawPayload": { "metric": "neo4j_query_duration_p95_ms", "value": 3421, "slo": 1000 }
+  },
+  {
+    "signalType": "monitoring_alert",
+    "sourceSystem": "prometheus",
+    "affectedCiId": "orchestrator-prod",
+    "severity": "medium",
+    "title": "Orchestrator memory 1.8 GB — 4 h sustained growth",
+    "description": "circuit-breaker event buffer not flushing; flush_interval=0",
+    "occurredAt": "2026-01-15T10:00:00Z",
+    "rawPayload": { "metric": "process_resident_memory_bytes", "value": 1932735283 }
+  },
+  {
+    "signalType": "cmdb_change",
+    "sourceSystem": "servicenow",
+    "affectedCiId": "api-waf",
+    "severity": "low",
+    "title": "WAF rule config change — SQLi rule triggered on GraphQL introspection",
+    "description": "False-positive blocking portal frontend schema discovery for 14 min",
+    "occurredAt": "2026-01-14T14:00:00Z",
+    "rawPayload": { "changeId": "CHG-8821", "ruleId": "sqli-union-detect" }
+  },
+  {
+    "signalType": "vendor_advisory",
+    "sourceSystem": "jira",
+    "affectedCiId": "vault-01",
+    "severity": "high",
+    "title": "HashiCorp Vault PKI auto-renew CronJob RBAC regression — CVE-2026-0042",
+    "description": "Helm chart v2.14 introduced a namespace RBAC misconfiguration disabling the PKI auto-renew job",
+    "occurredAt": "2026-01-15T05:00:00Z",
+    "rawPayload": { "advisory": "HCSB-2026-001", "affected": "vault-helm-chart>=2.14.0" }
+  }
+]
