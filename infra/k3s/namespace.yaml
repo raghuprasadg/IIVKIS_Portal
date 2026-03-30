@@ -1,0 +1,24 @@
+###############################################################################
+# IIVKIS — K3s manifests: Namespace + LocalPath PVC examples
+###############################################################################
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: iivkis
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    environment: on-prem
+---
+# Example local-path PVC for persistent data on single-node K3s
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: iivkis-pg-data
+  namespace: iivkis
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi

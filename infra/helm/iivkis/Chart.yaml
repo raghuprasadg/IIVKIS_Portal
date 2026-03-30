@@ -1,0 +1,26 @@
+apiVersion: v2
+name: iivkis
+description: Intelligent IT Vendor Knowledge Integration System — Helm chart for Kubernetes deployment
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - iivkis
+  - itsm
+  - aiops
+  - knowledge-graph
+home: https://github.com/raghuprasadg/IIVKIS_Portal
+sources:
+  - https://github.com/raghuprasadg/IIVKIS_Portal
+maintainers:
+  - name: IIVKIS DevOps
+    email: devops@iivkis.example.com
+dependencies:
+  - name: postgresql
+    version: "15.5.3"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  - name: redis
+    version: "18.19.4"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled

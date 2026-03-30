@@ -1,0 +1,73 @@
+###############################################################################
+# IIVKIS Helm values — Cloud / AWS EKS production override
+###############################################################################
+
+global:
+  imageRegistry: "123456789012.dkr.ecr.us-east-1.amazonaws.com"
+  imagePullSecrets: []
+  storageClass: "gp3"
+
+replicaCount:
+  api: 3
+  orchestrator: 2
+  portal: 2
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: app.iivkis.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          backend: api
+        - path: /orchestrator
+          pathType: Prefix
+          backend: orchestrator
+        - path: /
+          pathType: Prefix
+          backend: portal
+  tls:
+    - secretName: iivkis-tls-prod
+      hosts:
+        - app.iivkis.example.com
+
+# In EKS/cloud mode PostgreSQL and Redis are managed externally (RDS/ElastiCache)
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
+
+env:
+  NODE_ENV: production
+  DATABASE_URL: ""       # Set via ExternalSecrets → Vault
+  REDIS_URL: ""          # Set via ExternalSecrets → Vault
+  VAULT_ADDR: "https://vault.iivkis.example.com"
+  KEYCLOAK_URL: "https://auth.iivkis.example.com"
+
+externalSecrets:
+  enabled: true
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/iivkis-service-role"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true

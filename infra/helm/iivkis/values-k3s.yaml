@@ -1,0 +1,69 @@
+###############################################################################
+# IIVKIS Helm values — K3s / On-Premises override
+#
+# Use alongside the base values.yaml:
+#   helm upgrade --install iivkis infra/helm/iivkis \
+#     --values infra/helm/iivkis/values.yaml \
+#     --values infra/helm/iivkis/values-k3s.yaml
+###############################################################################
+
+global:
+  imageRegistry: ""   # Use local registry or pull from Docker Hub directly
+  storageClass: "local-path"  # K3s default storage class
+
+replicaCount:
+  api: 1
+  orchestrator: 1
+  portal: 1
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: iivkis.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          backend: api
+        - path: /orchestrator
+          pathType: Prefix
+          backend: orchestrator
+        - path: /
+          pathType: Prefix
+          backend: portal
+  tls: []  # TLS optional on-prem; add cert-manager issuer when ready
+
+resources:
+  api:
+    requests: { cpu: "100m", memory: "128Mi" }
+    limits:   { cpu: "500m", memory: "512Mi" }
+  orchestrator:
+    requests: { cpu: "200m", memory: "256Mi" }
+    limits:   { cpu: "1000m", memory: "1Gi" }
+  portal:
+    requests: { cpu: "50m", memory: "64Mi" }
+    limits:   { cpu: "250m", memory: "256Mi" }
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false   # single-node clusters cannot satisfy PDB
+
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: local-path
+
+redis:
+  enabled: true
+  replica:
+    replicaCount: 0   # single-instance for on-prem
+
+monitoring:
+  enabled: false  # enable separately if Prometheus is installed

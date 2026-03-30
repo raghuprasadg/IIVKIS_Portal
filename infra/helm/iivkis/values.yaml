@@ -1,0 +1,163 @@
+###############################################################################
+# IIVKIS Helm Chart — Default Values
+#
+# Override any of these in environment-specific values files:
+#   values-prod.yaml, values-staging.yaml, values-k3s.yaml
+###############################################################################
+
+global:
+  imageRegistry: ""           # e.g. "123456789012.dkr.ecr.us-east-1.amazonaws.com"
+  imagePullSecrets: []
+  storageClass: ""
+  tenantId: "tenant-default"
+
+# ─── Replica counts ───────────────────────────────────────────────────────────
+replicaCount:
+  api: 2
+  orchestrator: 2
+  portal: 2
+
+# ─── Images ───────────────────────────────────────────────────────────────────
+image:
+  api:
+    repository: iivkis/api
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  orchestrator:
+    repository: iivkis/orchestrator
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  portal:
+    repository: iivkis/portal
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+# ─── Service ports ────────────────────────────────────────────────────────────
+service:
+  api:
+    type: ClusterIP
+    port: 4000
+  orchestrator:
+    type: ClusterIP
+    port: 5000
+  portal:
+    type: ClusterIP
+    port: 3000
+
+# ─── Ingress ──────────────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  hosts:
+    - host: iivkis.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          backend: api
+        - path: /orchestrator
+          pathType: Prefix
+          backend: orchestrator
+        - path: /
+          pathType: Prefix
+          backend: portal
+  tls:
+    - secretName: iivkis-tls
+      hosts:
+        - iivkis.example.com
+
+# ─── Resources ────────────────────────────────────────────────────────────────
+resources:
+  api:
+    requests: { cpu: "250m", memory: "256Mi" }
+    limits:   { cpu: "1000m", memory: "1Gi" }
+  orchestrator:
+    requests: { cpu: "500m", memory: "512Mi" }
+    limits:   { cpu: "2000m", memory: "2Gi" }
+  portal:
+    requests: { cpu: "100m", memory: "128Mi" }
+    limits:   { cpu: "500m", memory: "512Mi" }
+
+# ─── Autoscaling ──────────────────────────────────────────────────────────────
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# ─── Environment variables ────────────────────────────────────────────────────
+env:
+  NODE_ENV: production
+  LOG_LEVEL: info
+  # Secrets are mounted via ExternalSecrets / Vault Agent — do not set here
+  DATABASE_URL: ""
+  REDIS_URL: ""
+  VAULT_ADDR: ""
+  VAULT_TOKEN: ""
+  KEYCLOAK_URL: ""
+  KEYCLOAK_REALM: "iivkis"
+  KEYCLOAK_CLIENT_ID: "iivkis-api"
+
+# ─── External Secrets ─────────────────────────────────────────────────────────
+externalSecrets:
+  enabled: false
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  refreshInterval: 1h
+
+# ─── Service Account ─────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  name: "iivkis"
+  annotations: {}   # Add IRSA annotation here for AWS: eks.amazonaws.com/role-arn
+
+# ─── Pod Disruption Budget ────────────────────────────────────────────────────
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# ─── Persistence ─────────────────────────────────────────────────────────────
+persistence:
+  enabled: false
+  size: 10Gi
+  storageClass: ""
+
+# ─── Network Policy ──────────────────────────────────────────────────────────
+networkPolicy:
+  enabled: true
+
+# ─── PostgreSQL (Bitnami sub-chart) ──────────────────────────────────────────
+postgresql:
+  enabled: true
+  auth:
+    database: iivkis
+    username: iivkis
+    existingSecret: iivkis-pg-secret
+  primary:
+    persistence:
+      enabled: true
+      size: 50Gi
+  metrics:
+    enabled: true
+
+# ─── Redis (Bitnami sub-chart) ───────────────────────────────────────────────
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    existingSecret: iivkis-redis-secret
+  replica:
+    replicaCount: 1
+  metrics:
+    enabled: true
+
+# ─── Monitoring ──────────────────────────────────────────────────────────────
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    namespace: monitoring

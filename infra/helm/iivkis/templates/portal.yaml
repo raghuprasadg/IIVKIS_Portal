@@ -1,0 +1,72 @@
+{{- /*
+IIVKIS Helm Chart — Portal Deployment
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iivkis.fullname" . }}-portal
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iivkis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
+spec:
+  replicas: {{ .Values.replicaCount.portal }}
+  selector:
+    matchLabels:
+      {{- include "iivkis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: portal
+  template:
+    metadata:
+      labels:
+        {{- include "iivkis.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: portal
+    spec:
+      serviceAccountName: {{ include "iivkis.serviceAccountName" . }}
+      containers:
+        - name: portal
+          image: "{{ .Values.global.imageRegistry }}/{{ .Values.image.portal.repository }}:{{ .Values.image.portal.tag }}"
+          imagePullPolicy: {{ .Values.image.portal.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.portal.port }}
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.env.NODE_ENV | quote }}
+            - name: PORT
+              value: {{ .Values.service.portal.port | quote }}
+            - name: NEXT_PUBLIC_API_URL
+              value: "/api"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources.portal | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "iivkis.fullname" . }}-portal
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iivkis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
+spec:
+  type: {{ .Values.service.portal.type }}
+  ports:
+    - port: {{ .Values.service.portal.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "iivkis.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
