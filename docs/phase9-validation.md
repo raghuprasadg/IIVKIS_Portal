@@ -99,7 +99,43 @@ Phase 9 validation: 28 passed, 0 failed
 
 ---
 
-## How to Run Locally
+## Phase 9 Full-Flow Validation
+
+**Script:** `npm run validate:phase9-flow`  
+**Result:** 39/39 PASS
+
+Exercises the complete **query → correlation → response** pipeline in-process:
+
+| Step | What is tested | Result |
+|------|---------------|--------|
+| `ce.signal.ingest` direct | Analysis agent ingests 4 signals, produces groups | ✅ 14 checks |
+| `ce.group.query` direct | Query groups from analysis agent stub | ✅ 5 checks |
+| Orchestrator routing | `orchestrate(ce.signal.ingest)`, unknown task error | ✅ 7 checks |
+| IntegrationPipeline.run | Full pipeline: rawEvents → normalized → correlated | ✅ 6 checks |
+| E2E query→correlation→response | 3-step end-to-end with rootCauseNarrative + evidence | ✅ 7 checks |
+
+```
+── 1. Signal Ingestion (ce.signal.ingest) ───────────────────────
+  ✅ 14 checks passed — 2 groups produced, confidence=55
+
+── 2. Group Query (ce.group.query) ──────────────────────────────
+  ✅ 5 checks passed
+
+── 3. Orchestrator Routing ──────────────────────────────────────
+  ✅ 7 checks passed — unknown task → UNKNOWN_TASK_TYPE
+
+── 4. Integration Pipeline (full run) ───────────────────────────
+  ✅ 6 checks passed — 1 group, 4 normalizedSignals
+
+── 5. End-to-end: query → correlation → response ────────────────
+  ✅ 7 checks passed
+     → rootCauseNarrative: "2 signals from 'grafana' within 10 min window..."
+     → evidence items: 1, signals in group: 2
+
+════════════════════════════════════════════════════════════
+Phase 9 full-flow validation: 39 passed, 0 failed
+```
+
 
 ```bash
 # 1. Copy environment file
@@ -138,5 +174,6 @@ node scripts/validate-phase9.mjs --live
 | Phase 7-final — Acceptance Criteria | ✅ 22/22 PASS |
 | Phase 8 — Security Hardening (Jest) | ✅ 112/112 PASS |
 | Phase 9 — Docker + Local Run | ✅ 28/28 PASS |
+| Phase 9 — Full Flow (query→correlation→response) | ✅ 39/39 PASS |
 
 **Phase 9 is complete. No blockers.**
