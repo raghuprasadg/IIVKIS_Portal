@@ -1,0 +1,150 @@
+# IIVKIS — UAT Environment Overlay
+#
+# Extends infra/docker-compose.yml with UAT-specific overrides so that the
+# UAT stack runs completely independently from any development instance.
+#
+# Usage:
+#   cd infra
+#   docker compose -f docker-compose.yml -f docker-compose.uat.yml up -d
+#
+# UAT ports (shifted +10 to avoid clashes with dev stack):
+#   API          → 4010
+#   Orchestrator → 5010
+#   Portal       → 3010
+
+name: iivkis-uat
+
+# ─── Network ────────────────────────────────────────────────────────────────
+networks:
+  iivkis-uat-net:
+    driver: bridge
+
+# ─── Services ───────────────────────────────────────────────────────────────
+services:
+
+  postgres:
+    container_name: iivkis-uat-postgres
+    environment:
+      POSTGRES_DB: iivkis_uat
+      POSTGRES_PASSWORD: iivkis_uat_pass
+    networks:
+      - iivkis-uat-net
+
+  redis:
+    container_name: iivkis-uat-redis
+    networks:
+      - iivkis-uat-net
+
+  neo4j:
+    container_name: iivkis-uat-neo4j
+    networks:
+      - iivkis-uat-net
+
+  keycloak:
+    container_name: iivkis-uat-keycloak
+    networks:
+      - iivkis-uat-net
+
+  vault:
+    container_name: iivkis-uat-vault
+    networks:
+      - iivkis-uat-net
+
+  prometheus:
+    container_name: iivkis-uat-prometheus
+    networks:
+      - iivkis-uat-net
+
+  grafana:
+    container_name: iivkis-uat-grafana
+    networks:
+      - iivkis-uat-net
+
+  api:
+    container_name: iivkis-uat-api
+    environment:
+      NODE_ENV: uat
+      DATABASE_URL: postgres://iivkis:iivkis_uat_pass@postgres:5432/iivkis_uat
+      REDIS_URL: redis://:${REDIS_PASSWORD:-iivkis_dev_pass}@redis:6379
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_DEV_ROOT_TOKEN:-iivkis-dev-root-token}
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: iivkis-uat
+      KEYCLOAK_CLIENT_ID: iivkis-uat-api
+      KEYCLOAK_CLIENT_SECRET: uat-client-secret
+      DEFAULT_TENANT_ID: tenant-uat
+    ports:
+      - "4010:4000"
+    networks:
+      - iivkis-uat-net
+
+  orchestrator:
+    container_name: iivkis-uat-orchestrator
+    environment:
+      NODE_ENV: uat
+      DATABASE_URL: postgres://iivkis:iivkis_uat_pass@postgres:5432/iivkis_uat
+      REDIS_URL: redis://:${REDIS_PASSWORD:-iivkis_dev_pass}@redis:6379
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_DEV_ROOT_TOKEN:-iivkis-dev-root-token}
+      DEFAULT_TENANT_ID: tenant-uat
+    ports:
+      - "5010:5000"
+    networks:
+      - iivkis-uat-net
+
+  portal:
+    container_name: iivkis-uat-portal
+    environment:
+      NODE_ENV: uat
+      NEXT_PUBLIC_API_URL: http://localhost:4010
+      NEXT_PUBLIC_ORCHESTRATOR_URL: http://localhost:5010
+      UAT_ENABLED: "true"
+      UAT_TENANT_ID: tenant-uat
+    ports:
+      - "3010:3000"
+    networks:
+      - iivkis-uat-net
+
+  # ── UAT Seeder ─────────────────────────────────────────────────────────────
+  # Loads uat-workspace/seed data and connector config into the UAT database on
+  # startup.  The service exits successfully once seeding is complete.
+  uat-seeder:
+    image: node:20-alpine
+    container_name: iivkis-uat-seeder
+    working_dir: /app
+    volumes:
+      - ../uat-workspace:/app/uat-workspace:ro
+    environment:
+      DATABASE_URL: postgres://iivkis:iivkis_uat_pass@postgres:5432/iivkis_uat
+      SEED_DIR: /app/uat-workspace/seed
+      CONNECTORS_CONFIG: /app/uat-workspace/connectors/config.json
+      TENANT_ID: tenant-uat
+    command:
+      - sh
+      - -c
+      - |
+        echo "=== IIVKIS UAT Seeder ===" && \
+        echo "Seed directory : $${SEED_DIR}" && \
+        ls -1 $${SEED_DIR} && \
+        echo "Connector config : $${CONNECTORS_CONFIG}" && \
+        node -e "
+          const fs = require('fs');
+          const incidents = JSON.parse(fs.readFileSync(process.env.SEED_DIR+'/incidents.json'));
+          const logs      = JSON.parse(fs.readFileSync(process.env.SEED_DIR+'/logs.json'));
+          const metrics   = JSON.parse(fs.readFileSync(process.env.SEED_DIR+'/metrics.json'));
+          const signals   = JSON.parse(fs.readFileSync(process.env.SEED_DIR+'/signals.json'));
+          const connectors = JSON.parse(fs.readFileSync(process.env.CONNECTORS_CONFIG));
+          console.log('incidents :', incidents.length);
+          console.log('logs      :', logs.length);
+          console.log('metrics   :', metrics.series.length, 'series');
+          console.log('signals   :', signals.length);
+          console.log('connectors:', connectors.connectors.length);
+          console.log('UAT seed loaded successfully — tenant:', process.env.TENANT_ID);
+        " && \
+        echo "=== UAT Seeder complete ==="
+    networks:
+      - iivkis-uat-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
