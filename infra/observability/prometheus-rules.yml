@@ -1,0 +1,134 @@
+# IIVKIS Prometheus Alerting Rules
+# Loaded by Prometheus via:  rule_files: ["iivkis-rules.yml"]
+
+groups:
+  - name: iivkis.api
+    interval: 30s
+    rules:
+      - alert: APIHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="iivkis-api", status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="iivkis-api"}[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "API error rate above 5 %"
+          description: "HTTP 5xx rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: APIHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="iivkis-api"}[5m])) by (le)
+          ) > 2
+        for: 3m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API p95 latency above 2 s"
+          description: "p95 response time is {{ $value | humanizeDuration }}."
+
+      - alert: APIDown
+        expr: up{job="iivkis-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "IIVKIS API is down"
+          description: "The iivkis-api target has been unreachable for more than 1 minute."
+
+  - name: iivkis.orchestrator
+    interval: 30s
+    rules:
+      - alert: OrchestratorDown
+        expr: up{job="iivkis-orchestrator"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: orchestrator
+        annotations:
+          summary: "IIVKIS Orchestrator is down"
+
+      - alert: PipelineQueueDepth
+        expr: iivkis_pipeline_queue_depth > 500
+        for: 5m
+        labels:
+          severity: warning
+          component: orchestrator
+        annotations:
+          summary: "Pipeline queue depth is high"
+          description: "Queue depth is {{ $value }} items."
+
+  - name: iivkis.correlation
+    interval: 60s
+    rules:
+      - alert: CorrelationAccuracyDrop
+        expr: |
+          iivkis_correlation_precision_pct < 0.70
+        for: 10m
+        labels:
+          severity: warning
+          component: correlation-engine
+        annotations:
+          summary: "Correlation precision dropped below 70 %"
+          description: "Precision is {{ $value | humanizePercentage }}."
+
+  - name: iivkis.billing
+    interval: 60s
+    rules:
+      - alert: TenantTokenBudgetExceeded
+        expr: |
+          iivkis_tenant_tokens_used_total / iivkis_tenant_token_budget > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          component: billing
+        annotations:
+          summary: "Tenant approaching token budget limit"
+          description: "Tenant {{ $labels.tenant_id }} is at {{ $value | humanizePercentage }} of budget."
+
+  - name: iivkis.infrastructure
+    interval: 30s
+    rules:
+      - alert: PostgresDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL is unreachable"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis is unreachable"
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Node memory usage above 90 %"
+          description: "Available memory: {{ $value | humanizePercentage }} used."
+
+      - alert: DiskSpaceLow
+        expr: |
+          (1 - (node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Disk usage above 85 %"

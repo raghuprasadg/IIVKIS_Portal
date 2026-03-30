@@ -21,6 +21,7 @@ import { correlationRouter } from './routes/correlation';
 import { chatRouter } from './routes/chat';
 import { integrationRouter } from './routes/integrations';
 import { analyticsRouter } from './routes/analytics';
+import { billingRouter } from './routes/billing';
 
 const app = express();
 const PORT = process.env['PORT'] ?? 4000;
@@ -102,6 +103,7 @@ app.use('/api/v1/correlation', ...apiAuth, correlationRouter);
 app.use('/api/v1/chat', ...apiAuth, chatRouter);
 app.use('/api/v1/integrations', ...apiAuth, integrationRouter);
 app.use('/api/v1/analytics', ...apiAuth, analyticsRouter);
+app.use('/api/v1/billing', ...apiAuth, billingRouter);
 
 // ── Global error handler (must be last) ───────────────────────────────────────
 app.use(errorHandler);

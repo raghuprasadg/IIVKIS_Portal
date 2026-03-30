@@ -20,6 +20,7 @@
     "validate:phase9-flow": "node scripts/validate-phase9-flow.mjs",
     "validate:phase10": "node scripts/validate-phase10.mjs",
     "validate:phase11": "node scripts/validate-phase11.mjs",
+    "validate:phase12": "node scripts/validate-phase12.mjs",
     "test:phase8": "jest"
   },
   "devDependencies": {
