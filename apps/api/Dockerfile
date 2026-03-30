@@ -24,9 +24,6 @@ RUN npm run build --workspace=apps/api
 # ─── Stage 2: development (ts-node, with sources) ────────────────────────────
 FROM node:18-alpine AS development
 
-# Add wget for Docker health checks
-RUN apk add --no-cache wget
-
 WORKDIR /app
 
 COPY package.json tsconfig.json ./
@@ -49,8 +46,6 @@ CMD ["npx", "ts-node", "--project", "tsconfig.json", "src/index.ts"]
 
 # ─── Stage 3: production ──────────────────────────────────────────────────────
 FROM node:18-alpine AS production
-
-RUN apk add --no-cache wget
 
 WORKDIR /app
 

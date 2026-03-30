@@ -16,6 +16,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "typecheck": "tsc --noEmit",
     "validate:phase4": "node scripts/validate-phase4.mjs",
+    "validate:phase9": "node scripts/validate-phase9.mjs",
     "test:phase8": "jest"
   },
   "devDependencies": {

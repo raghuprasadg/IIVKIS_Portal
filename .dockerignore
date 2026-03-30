@@ -1,0 +1,46 @@
+# ─── IIVKIS .dockerignore ────────────────────────────────────────────────────
+# Excludes files that don't need to be in the Docker build context,
+# speeding up image builds.
+
+# Version control
+.git
+.gitignore
+
+# Node modules (reinstalled inside image)
+node_modules
+**/node_modules
+
+# TypeScript build output (rebuilt inside image)
+**/dist
+**/.next
+
+# Test artefacts
+coverage
+**/*.test.ts
+**/*.spec.ts
+tests/
+
+# Editor / IDE
+.vscode
+.idea
+*.suo
+*.swp
+*.swo
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+
+# Local environment (never baked into images)
+infra/.env
+infra/.env.local
+**/.env.local
+**/.env.*.local
+
+# Documentation (not needed at runtime)
+docs/
+scripts/
+*.md
+
+# CI / build
+.github/

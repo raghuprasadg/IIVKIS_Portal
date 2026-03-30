@@ -250,6 +250,70 @@ services:
       retries: 5
       start_period: 30s
 
+  # ── IIVKIS Orchestrator ───────────────────────────────────────────────────
+  orchestrator:
+    build:
+      context: ..
+      dockerfile: apps/orchestrator/Dockerfile
+      target: development
+    container_name: iivkis-orchestrator
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: ${ORCHESTRATOR_PORT:-5000}
+      DATABASE_URL: postgres://${POSTGRES_USER:-iivkis}:${POSTGRES_PASSWORD:-iivkis_dev_pass}@postgres:5432/${POSTGRES_DB:-iivkis}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-iivkis_dev_pass}@redis:6379
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-iivkis_dev_pass}
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_DEV_ROOT_TOKEN:-iivkis-dev-root-token}
+    ports:
+      - "${ORCHESTRATOR_PORT:-5000}:5000"
+    networks:
+      - iivkis-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --quiet --spider http://localhost:5000/health || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── IIVKIS Portal (Next.js) ────────────────────────────────────────────────
+  portal:
+    build:
+      context: ..
+      dockerfile: apps/portal/Dockerfile
+      target: development
+    container_name: iivkis-portal
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-4000}
+      NEXT_PUBLIC_ORCHESTRATOR_URL: http://localhost:${ORCHESTRATOR_PORT:-5000}
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "${PORTAL_PORT:-3000}:3000"
+    networks:
+      - iivkis-net
+    depends_on:
+      - api
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --quiet --spider http://localhost:3000 || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # ── IIVKIS API (base) ──────────────────────────────────────────────────────
   api:
     build:
