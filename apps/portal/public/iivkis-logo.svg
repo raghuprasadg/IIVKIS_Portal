@@ -1,0 +1,41 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="20" y1="20" x2="300" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0AA3D6"/>
+      <stop offset="1" stop-color="#0F6FB5"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="78" y1="84" x2="242" y2="236" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6BE5FF"/>
+      <stop offset="1" stop-color="#0FC2E8"/>
+    </linearGradient>
+    <filter id="softGlow" x="0" y="0" width="340" height="340" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feBlend in="SourceGraphic" in2="b" mode="screen"/>
+    </filter>
+  </defs>
+
+  <g transform="translate(20,20)" filter="url(#softGlow)">
+    <rect x="0" y="0" width="280" height="280" rx="44" fill="url(#bgGrad)"/>
+
+    <path d="M140 54L211 95V177C211 214 183 247 140 262C97 247 69 214 69 177V95L140 54Z" fill="#0A2747" fill-opacity="0.36"/>
+    <path d="M140 70L197 103V171C197 202 174 230 140 243C106 230 83 202 83 171V103L140 70Z" stroke="url(#accentGrad)" stroke-width="10"/>
+
+    <circle cx="140" cy="120" r="16" fill="#DDF9FF"/>
+    <circle cx="108" cy="162" r="12" fill="#DDF9FF"/>
+    <circle cx="172" cy="162" r="12" fill="#DDF9FF"/>
+    <circle cx="140" cy="200" r="13" fill="#DDF9FF"/>
+
+    <path d="M140 136V185" stroke="#DDF9FF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M126 128L114 149" stroke="#DDF9FF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M154 128L166 149" stroke="#DDF9FF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M120 171L132 189" stroke="#DDF9FF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M160 171L148 189" stroke="#DDF9FF" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(350,84)">
+    <text x="0" y="88" fill="#0B2038" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="84" font-weight="800" letter-spacing="4">IIVKIS</text>
+    <text x="0" y="142" fill="#0F6FB5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="33" font-weight="600" letter-spacing="1.2">
+      Intelligent IT Vendor Knowledge Integration System
+    </text>
+  </g>
+</svg>
