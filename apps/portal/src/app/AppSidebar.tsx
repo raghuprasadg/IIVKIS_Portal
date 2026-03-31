@@ -40,8 +40,12 @@ export default function AppSidebar() {
   return (
     <nav className="sidebar">
       <div className="sidebar-logo">
-        <div className="sidebar-logo-text">IIVKIS</div>
-        <div className="sidebar-logo-sub">Operations Portal</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/iivkis-logo-nav.svg"
+          alt="IIVKIS – Intelligent IT Vendor Knowledge Integration System"
+          style={{ width: '100%', maxWidth: '190px', height: 'auto', display: 'block' }}
+        />
       </div>
 
       <div className="sidebar-nav">

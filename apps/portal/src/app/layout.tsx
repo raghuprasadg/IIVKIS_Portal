@@ -3,7 +3,13 @@ import './globals.css';
 import AppSidebar from './AppSidebar';
 
 export const metadata: Metadata = {
+  title: 'IIVKIS – Operations Portal',
   description: 'Intelligent IT Vendor Knowledge Integration System — Operations Portal',
+  icons: {
+    icon: '/iivkis-logo-nav.svg',
+    shortcut: '/iivkis-logo-nav.svg',
+    apple: '/iivkis-logo-nav.svg',
+  },
 };
 
 export const viewport: Viewport = {

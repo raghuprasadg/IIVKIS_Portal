@@ -33,8 +33,8 @@
   </g>
 
   <g transform="translate(350,84)">
-    <text x="0" y="88" fill="#0B2038" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="84" font-weight="800" letter-spacing="4">IIVKIS</text>
-    <text x="0" y="142" fill="#0F6FB5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="33" font-weight="600" letter-spacing="1.2">
+    <text x="0" y="88" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="84" font-weight="800" letter-spacing="4">IIVKIS</text>
+    <text x="0" y="142" fill="#00d4ff" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="33" font-weight="600" letter-spacing="1.2">
       Intelligent IT Vendor Knowledge Integration System
     </text>
   </g>
