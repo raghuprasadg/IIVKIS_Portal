@@ -98,6 +98,19 @@ export default function AppSidebar() {
           </div>
         )}
       </div>
+
+      <div style={{
+        padding: '0.6rem 1rem 0.75rem',
+        borderTop: '1px solid var(--color-glass-border)',
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: '0.6rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+          © {new Date().getFullYear()} Raghuprasad Gundeti
+        </div>
+        <div style={{ fontSize: '0.55rem', color: 'var(--color-text-muted)', opacity: 0.7, marginTop: '1px' }}>
+          All rights reserved · IIVKIS
+        </div>
+      </div>
     </nav>
   );
 }
