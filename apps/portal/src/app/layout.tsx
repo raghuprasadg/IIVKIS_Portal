@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import AppSidebar from './AppSidebar';
+import RootClient from './RootClient';
 
 export const metadata: Metadata = {
   title: 'IIVKIS – Operations Portal',
@@ -22,10 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark">
       <body>
-        <div className="app-layout">
-          <AppSidebar />
-          <main className="main-content">{children}</main>
-        </div>
+        <RootClient>{children}</RootClient>
       </body>
     </html>
   );
