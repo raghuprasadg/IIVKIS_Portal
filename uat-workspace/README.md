@@ -32,15 +32,62 @@ npm run validate:phase10
 
 Expected output: **39 checks PASS**
 
-### 2. Start the stack with UAT environment
+### 2. Start the full UAT stack
+
+**Prerequisites:** Docker ≥ 24, Docker Compose v2, Node.js ≥ 18
+
+```bash
+# From the repository root
+cd infra
+cp .env.example .env           # copy env defaults (safe dev values pre-filled)
+
+# Build app images and start every service in the background
+docker compose -f docker-compose.yml -f docker-compose.uat.yml up --build -d
+```
+
+First run takes ~3–5 minutes to build the three app images (api, orchestrator, portal).
+
+### 3. Verify services are healthy
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.uat.yml ps
+```
+
+All services should show **Up (healthy)** or **Up** within ~60 seconds.
+
+### 4. Access the UAT endpoints
+
+| Service | URL | Notes |
+|---------|-----|-------|
+| **Portal (UAT dashboard)** | http://localhost:3010/uat | Main UAT workspace UI |
+| **API** | http://localhost:4010/api/v1 | REST API |
+| **Orchestrator** | http://localhost:5010 | Pipeline endpoint |
+| **Grafana** | http://localhost:3001 | admin / iivkis_dev_pass |
+| **Prometheus** | http://localhost:9090 | Metrics |
+| **Keycloak** | http://localhost:8080 | admin / admin_dev_pass |
+| **Neo4j Browser** | http://localhost:7474 | neo4j / iivkis_dev_pass |
+
+> **Tip:** UAT ports are shifted +10 from dev ports (3010, 4010, 5010) so both environments can run simultaneously.
+
+### 5. Seed data is loaded automatically
+
+The `uat-seeder` container runs once on startup and loads all four seed files (incidents, logs, metrics, signals) plus the 6 mock connector configs into the UAT database (`iivkis_uat`). Check seeder output with:
+
+```bash
+docker logs iivkis-uat-seeder
+```
+
+### 6. Stop the UAT stack
 
 ```bash
 cd infra
-cp .env.example .env           # edit as needed
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.uat.yml down
 ```
 
-Then open [http://localhost:3000/uat](http://localhost:3000/uat) to access the UAT dashboard.
+To also delete all UAT data volumes:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.uat.yml down -v
+```
 
 ---
 
