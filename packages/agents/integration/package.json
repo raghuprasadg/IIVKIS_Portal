@@ -2,8 +2,8 @@
   "name": "@iivkis/agents-integration",
   "version": "0.0.1",
   "description": "IIVKIS Integration Agent — connects to external IT systems and data sources",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

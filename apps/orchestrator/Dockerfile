@@ -56,13 +56,7 @@ COPY packages/agents/troubleshooting/package.json ./packages/agents/troubleshoot
 COPY packages/agents/vendor-knowledge/package.json ./packages/agents/vendor-knowledge/
 COPY apps/orchestrator/package.json        ./apps/orchestrator/
 
-RUN npm install \
-      --workspace=packages/shared \
-      --workspace=packages/agents/analysis \
-      --workspace=packages/agents/integration \
-      --workspace=packages/agents/troubleshooting \
-      --workspace=packages/agents/vendor-knowledge \
-      --workspace=apps/orchestrator
+RUN npm install
 
 COPY packages/shared/src                      ./packages/shared/src
 COPY packages/shared/tsconfig.json            ./packages/shared/
@@ -80,8 +74,9 @@ COPY apps/orchestrator/tsconfig.json          ./apps/orchestrator/
 WORKDIR /app/apps/orchestrator
 EXPOSE 5000
 ENV NODE_ENV=development
+ENV TS_NODE_SKIP_TYPE_CHECK=true
 
-CMD ["npx", "ts-node", "--project", "tsconfig.json", "src/index.ts"]
+CMD ["npx", "ts-node", "--transpile-only", "--project", "tsconfig.json", "src/index.ts"]
 
 # ─── Stage 3: production ──────────────────────────────────────────────────────
 FROM node:18-alpine AS production

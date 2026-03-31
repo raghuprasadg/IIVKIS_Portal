@@ -2,8 +2,8 @@
   "name": "@iivkis/agents-troubleshooting",
   "version": "0.0.1",
   "description": "IIVKIS Troubleshooting Agent — generates resolution plans for IT incidents",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

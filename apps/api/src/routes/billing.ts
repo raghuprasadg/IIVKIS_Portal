@@ -9,11 +9,11 @@
  * Admin users can pass ?tenantId=<id> to inspect any tenant (RBAC-gated server-side).
  */
 import { Router, type Request, type Response } from 'express';
-import { AppError } from '../middleware/error-handler.js';
+import { AppError } from '../middleware/error-handler';
 import {
   getUsageSummary,
   listBillingPeriods,
-} from '../services/billing.service.js';
+} from '../services/billing.service';
 
 export const billingRouter = Router();
 

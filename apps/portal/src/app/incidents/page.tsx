@@ -22,6 +22,12 @@ const ALL_INCIDENTS: Incident[] = [
   { id: 'INC-2382', title: 'Keycloak SSO login failures — 503 rate > 5%', severity: 'high', status: 'Resolved', assignee: 'JR', created: '2024-01-15 09:15', sla: { label: 'Resolved', variant: 'ok' }, source: 'Keycloak' },
   { id: 'INC-2375', title: 'Jira webhook delivery failures — integration queue backlog', severity: 'medium', status: 'Resolved', assignee: 'SK', created: '2024-01-15 08:00', sla: { label: 'Resolved', variant: 'ok' }, source: 'Jira' },
   { id: 'INC-2371', title: 'PagerDuty escalation policy misconfiguration', severity: 'low', status: 'Resolved', assignee: 'TL', created: '2024-01-14 22:45', sla: { label: 'Resolved', variant: 'ok' }, source: 'PagerDuty' },
+  { id: 'INC-2368', title: 'Datadog replica lag alert — pg-replica-03 breached 87s threshold', severity: 'high', status: 'In Progress', assignee: 'JR', created: '2024-01-14 21:10', sla: { label: '2h 15m', variant: 'warn' }, source: 'Datadog' },
+  { id: 'INC-2361', title: 'Splunk timeline gap — orchestrator retry chain missing 6 spans', severity: 'medium', status: 'Investigating', assignee: 'TL', created: '2024-01-14 20:34', sla: { label: '1h 05m', variant: 'warn' }, source: 'Splunk' },
+  { id: 'INC-2358', title: 'GitHub deployment rollback triggered after CE throughput regression', severity: 'high', status: 'Monitoring', assignee: 'BW', created: '2024-01-14 18:40', sla: { label: '3h 22m', variant: 'ok' }, source: 'GitHub' },
+  { id: 'INC-2352', title: 'AWS CloudWatch alarm storm — worker-node-07 saturation detected', severity: 'critical', status: 'Open', assignee: 'AM', created: '2024-01-14 17:05', sla: { label: '0h 32m', variant: 'breach' }, source: 'CloudWatch' },
+  { id: 'INC-2349', title: 'Zabbix disaster alert — edge-router-02 packet loss during failover drill', severity: 'medium', status: 'Monitoring', assignee: 'SK', created: '2024-01-14 16:15', sla: { label: '5h 10m', variant: 'ok' }, source: 'Zabbix' },
+  { id: 'INC-2344', title: 'Slack war-room flood — duplicate Grafana alerts posted to incident channel', severity: 'low', status: 'Resolved', assignee: 'JR', created: '2024-01-14 15:48', sla: { label: 'Resolved', variant: 'ok' }, source: 'Slack' },
 ];
 
 export default function IncidentsPage() {
@@ -47,7 +53,7 @@ export default function IncidentsPage() {
       <div className="page-header">
         <div>
           <div className="page-title">Incidents</div>
-          <div className="page-subtitle">{filtered.length} incidents · {ALL_INCIDENTS.filter(i => i.status !== 'Resolved').length} open</div>
+          <div className="page-subtitle">{filtered.length} incidents · {ALL_INCIDENTS.filter(i => i.status !== 'Resolved').length} open · 12 vendor-backed examples</div>
         </div>
         <button className="btn-primary">＋ New Incident</button>
       </div>

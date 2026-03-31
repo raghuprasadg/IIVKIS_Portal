@@ -31,7 +31,7 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
 
 # Install all deps (including devDependencies for ts-node)
-RUN npm install --workspace=packages/shared --workspace=apps/api
+RUN npm install
 
 COPY packages/shared/src ./packages/shared/src
 COPY packages/shared/tsconfig.json ./packages/shared/
@@ -42,7 +42,7 @@ WORKDIR /app/apps/api
 EXPOSE 4000
 ENV NODE_ENV=development
 
-CMD ["npx", "ts-node", "--project", "tsconfig.json", "src/index.ts"]
+CMD ["npx", "ts-node", "--transpile-only", "--project", "tsconfig.json", "src/index.ts"]
 
 # ─── Stage 3: production ──────────────────────────────────────────────────────
 FROM node:18-alpine AS production

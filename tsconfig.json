@@ -18,7 +18,22 @@
     "declarationMap": true,
     "sourceMap": true,
     "composite": true,
-    "incremental": true
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@iivkis/shared": ["packages/shared/src"],
+      "@iivkis/shared/*": ["packages/shared/src/*"],
+      "@iivkis/ui": ["packages/ui/src"],
+      "@iivkis/ui/*": ["packages/ui/src/*"],
+      "@iivkis/agents-analysis": ["packages/agents/analysis/src"],
+      "@iivkis/agents-analysis/*": ["packages/agents/analysis/src/*"],
+      "@iivkis/agents-integration": ["packages/agents/integration/src"],
+      "@iivkis/agents-integration/*": ["packages/agents/integration/src/*"],
+      "@iivkis/agents-troubleshooting": ["packages/agents/troubleshooting/src"],
+      "@iivkis/agents-troubleshooting/*": ["packages/agents/troubleshooting/src/*"],
+      "@iivkis/agents-vendor-knowledge": ["packages/agents/vendor-knowledge/src"],
+      "@iivkis/agents-vendor-knowledge/*": ["packages/agents/vendor-knowledge/src/*"]
+    }
   },
   "exclude": ["node_modules", "dist", "build", ".next", "coverage"]
 }

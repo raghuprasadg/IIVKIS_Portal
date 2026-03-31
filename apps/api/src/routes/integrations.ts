@@ -11,7 +11,7 @@
 import { Router, type Request, type Response } from 'express';
 import { Pool } from 'pg';
 import { randomUUID } from 'crypto';
-import { AppError } from '../middleware/error-handler.js';
+import { AppError } from '../middleware/error-handler';
 
 export const integrationRouter = Router();
 

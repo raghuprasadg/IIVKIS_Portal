@@ -8,6 +8,7 @@
  *  /api/v1/*          — versioned REST API (auth-gated)
  */
 import express, { type Request, type Response } from 'express';
+import { CORRELATION_ENGINE_DEFINITIONS } from './constants/correlation-engines';
 import { createClient } from './infra/service-client';
 import { authMiddleware } from './middleware/auth';
 import { tenantMiddleware } from './middleware/tenant';
@@ -92,6 +93,11 @@ app.get('/metrics', (_req: Request, res: Response) => {
   ];
   res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
   res.send(lines.join('\n') + '\n');
+});
+
+// ── Public metadata endpoints (no auth) ─────────────────────────────────────
+app.get('/api/v1/public/correlation/engines', (_req: Request, res: Response) => {
+  res.json({ data: CORRELATION_ENGINE_DEFINITIONS, count: CORRELATION_ENGINE_DEFINITIONS.length });
 });
 
 // ── API v1 routes (all require auth + tenant RLS + rate limiting) ─────────────

@@ -22,10 +22,10 @@ const SERVICES = [
 
 const RECENT_INCIDENTS = [
   { id: 'INC-2401', title: 'ServiceNow API timeout cascade', severity: 'critical', status: 'In Progress', time: '12m ago' },
-  { id: 'INC-2398', title: 'Vault certificate renewal failure', severity: 'high', status: 'Assigned', time: '34m ago' },
-  { id: 'INC-2395', title: 'Neo4j query latency spike', severity: 'medium', status: 'Investigating', time: '1h ago' },
-  { id: 'INC-2391', title: 'Grafana dashboard data gaps', severity: 'low', status: 'Monitoring', time: '2h ago' },
-  { id: 'INC-2388', title: 'Redis memory threshold warning', severity: 'medium', status: 'Resolved', time: '3h ago' },
+  { id: 'INC-2398', title: 'PagerDuty escalation on Vault TLS expiry', severity: 'high', status: 'Assigned', time: '34m ago' },
+  { id: 'INC-2395', title: 'Prometheus detected Neo4j latency spike', severity: 'medium', status: 'Investigating', time: '1h ago' },
+  { id: 'INC-2389', title: 'Datadog flagged replica lag drift', severity: 'high', status: 'Monitoring', time: '1h ago' },
+  { id: 'INC-2384', title: 'GitHub rollback after CE regression', severity: 'medium', status: 'Resolved', time: '2h ago' },
 ] as const;
 
 const CORRELATIONS = [
@@ -35,6 +35,16 @@ const CORRELATIONS = [
 ] as const;
 
 const SPARK_HEIGHTS = [35, 55, 40, 70, 45, 80, 60, 90, 50, 75, 85, 65] as const;
+const VENDOR_PROOF = [
+  { vendor: 'ServiceNow', example: 'INC-3001 + CHG-8821' },
+  { vendor: 'PagerDuty', example: 'Vault expiry escalation' },
+  { vendor: 'Jira', example: 'Webhook backlog replay' },
+  { vendor: 'Datadog', example: 'Replica lag + node OOM' },
+  { vendor: 'Grafana', example: 'Alert storm snapshots' },
+  { vendor: 'GitHub', example: 'Rollback trace' },
+  { vendor: 'CloudWatch', example: 'EKS alarm correlation' },
+  { vendor: 'Zabbix', example: 'Legacy edge alert import' },
+] as const;
 
 export default function DashboardPage() {
   const [time, setTime] = useState('');
@@ -192,13 +202,26 @@ export default function DashboardPage() {
             {[
               { name: 'ServiceNow', status: 'Synced', ok: true },
               { name: 'Jira', status: 'Synced', ok: true },
-              { name: 'PagerDuty', status: 'Delayed 3m', ok: false },
+              { name: 'Prometheus', status: 'Synced', ok: true },
+              { name: 'Datadog', status: 'Delayed 3m', ok: false },
+              { name: 'GitHub', status: 'Synced', ok: true },
+              { name: 'CloudWatch', status: 'Synced', ok: true },
             ].map((int) => (
               <div key={int.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', fontSize: '0.8rem' }}>
                 <span style={{ color: 'var(--color-text-secondary)' }}>{int.name}</span>
                 <span className={int.ok ? 'pill pill-green' : 'pill pill-cyan'} style={{ fontSize: '0.68rem' }}>
                   {int.ok ? '✓ ' : '⚠ '}{int.status}
                 </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="glass-card section-card" style={{ flex: 1 }}>
+            <div className="section-title"><span>🧪</span> Vendor Proof</div>
+            {VENDOR_PROOF.map((item) => (
+              <div key={item.vendor} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.55rem', fontSize: '0.77rem' }}>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{item.vendor}</span>
+                <span style={{ color: 'var(--color-text-muted)', textAlign: 'right' }}>{item.example}</span>
               </div>
             ))}
           </div>

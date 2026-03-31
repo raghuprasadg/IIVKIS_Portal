@@ -7,7 +7,7 @@
  */
 import { Router, type Request, type Response } from 'express';
 import { Pool } from 'pg';
-import { AppError } from '../middleware/error-handler.js';
+import { AppError } from '../middleware/error-handler';
 
 export const analyticsRouter = Router();
 
