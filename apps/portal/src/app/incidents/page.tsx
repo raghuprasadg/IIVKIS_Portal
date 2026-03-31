@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { isConsoleAuthenticated, readConsoleMode, type ConsoleMode } from '../lib/console-mode';
 
 interface Incident {
   id: string;
@@ -26,18 +27,37 @@ const ALL_INCIDENTS: Incident[] = [
   { id: 'INC-2361', title: 'Splunk timeline gap — orchestrator retry chain missing 6 spans', severity: 'medium', status: 'Investigating', assignee: 'TL', created: '2024-01-14 20:34', sla: { label: '1h 05m', variant: 'warn' }, source: 'Splunk' },
   { id: 'INC-2358', title: 'GitHub deployment rollback triggered after CE throughput regression', severity: 'high', status: 'Monitoring', assignee: 'BW', created: '2024-01-14 18:40', sla: { label: '3h 22m', variant: 'ok' }, source: 'GitHub' },
   { id: 'INC-2352', title: 'AWS CloudWatch alarm storm — worker-node-07 saturation detected', severity: 'critical', status: 'Open', assignee: 'AM', created: '2024-01-14 17:05', sla: { label: '0h 32m', variant: 'breach' }, source: 'CloudWatch' },
+  { id: 'INC-2351', title: 'Cisco core router BGP flap storm detected from ServiceNow sync', severity: 'high', status: 'Investigating', assignee: 'JR', created: '2024-01-14 16:44', sla: { label: '1h 58m', variant: 'warn' }, source: 'Cisco' },
+  { id: 'INC-2350', title: 'Palo Alto firewall policy push rollback after deny-all drift', severity: 'critical', status: 'In Progress', assignee: 'SK', created: '2024-01-14 16:31', sla: { label: '0h 26m', variant: 'breach' }, source: 'Palo Alto' },
+  { id: 'INC-2348', title: 'Fortinet HA failover jitter on edge cluster ftg-east-02', severity: 'medium', status: 'Monitoring', assignee: 'BW', created: '2024-01-14 16:08', sla: { label: '4h 34m', variant: 'ok' }, source: 'Fortinet' },
+  { id: 'INC-2347', title: 'F5 BIG-IP iRule regression causing intermittent 502 bursts', severity: 'high', status: 'Open', assignee: 'TL', created: '2024-01-14 15:59', sla: { label: '0h 52m', variant: 'warn' }, source: 'F5' },
   { id: 'INC-2349', title: 'Zabbix disaster alert — edge-router-02 packet loss during failover drill', severity: 'medium', status: 'Monitoring', assignee: 'SK', created: '2024-01-14 16:15', sla: { label: '5h 10m', variant: 'ok' }, source: 'Zabbix' },
   { id: 'INC-2344', title: 'Slack war-room flood — duplicate Grafana alerts posted to incident channel', severity: 'low', status: 'Resolved', assignee: 'JR', created: '2024-01-14 15:48', sla: { label: 'Resolved', variant: 'ok' }, source: 'Slack' },
 ];
 
+const PLATFORM_SOURCES = new Set([
+  'ServiceNow', 'Vault', 'Prometheus', 'Grafana', 'Redis', 'Keycloak', 'Jira', 'PagerDuty',
+  'Datadog', 'Splunk', 'GitHub', 'CloudWatch', 'Zabbix', 'Slack',
+]);
+
 export default function IncidentsPage() {
+  const [mode, setMode] = useState<ConsoleMode>('operator');
   const [severity, setSeverity] = useState('');
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const perPage = 6;
 
-  const filtered = ALL_INCIDENTS.filter((inc) => {
+  useEffect(() => {
+    setMode(readConsoleMode());
+  }, []);
+
+  const scopedIncidents = ALL_INCIDENTS.filter((inc) => {
+    const isPlatformIncident = PLATFORM_SOURCES.has(inc.source);
+    return mode === 'operator' ? isPlatformIncident : !isPlatformIncident;
+  });
+
+  const filtered = scopedIncidents.filter((inc) => {
     if (severity && inc.severity !== severity) return false;
     if (status && inc.status !== status) return false;
     if (search && !inc.title.toLowerCase().includes(search.toLowerCase()) && !inc.id.toLowerCase().includes(search.toLowerCase())) return false;
@@ -47,13 +67,26 @@ export default function IncidentsPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paged = filtered.slice((page - 1) * perPage, page * perPage);
 
+  if (!isConsoleAuthenticated(mode)) {
+    return (
+      <div style={{ padding: '2rem' }}>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div className="page-title" style={{ marginBottom: '0.5rem' }}>Session Logged Out</div>
+          <div className="page-subtitle">Login from the sidebar to access incidents.</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Header */}
       <div className="page-header">
         <div>
           <div className="page-title">Incidents</div>
-          <div className="page-subtitle">{filtered.length} incidents · {ALL_INCIDENTS.filter(i => i.status !== 'Resolved').length} open · 12 vendor-backed examples</div>
+          <div className="page-subtitle">
+            {mode === 'operator' ? 'Operator Console · IIVKIS platform incidents' : 'End User Console · customer incidents'} · {filtered.length} incidents · {scopedIncidents.filter(i => i.status !== 'Resolved').length} open
+          </div>
         </div>
         <button className="btn-primary">＋ New Incident</button>
       </div>

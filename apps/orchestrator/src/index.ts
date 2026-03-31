@@ -32,6 +32,16 @@ app.post('/orchestrate', async (req: Request, res: Response) => {
   }
 });
 
+// Backward-compatible alias used by API chat route.
+app.post('/tasks', async (req: Request, res: Response) => {
+  try {
+    const result = await orchestrate(req.body as Parameters<typeof orchestrate>[0]);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Orchestration failed', detail: String(err) });
+  }
+});
+
 app.post('/pipeline/run', async (req: Request, res: Response) => {
   try {
     const pipeline = new IntegrationPipeline();

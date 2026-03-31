@@ -17,6 +17,113 @@ interface Session {
   messages: Message[];
 }
 
+interface KnowledgeArticle {
+  id: string;
+  title: string;
+  tags: string[];
+  summary: string;
+  nextActions: string[];
+}
+
+interface IncidentSignal {
+  id: string;
+  title: string;
+  source: string;
+  status: string;
+  tags: string[];
+}
+
+const KB_ARTICLES: KnowledgeArticle[] = [
+  {
+    id: 'KA-0821',
+    title: 'ServiceNow MID Server Connection Pool Exhaustion',
+    tags: ['servicenow', 'timeout', 'mid', 'connection', 'pool'],
+    summary: 'ServiceNow API timeouts are commonly caused by MID thread starvation and exhausted HTTP pools.',
+    nextActions: [
+      'Validate MID Server health and thread counts',
+      'Review recent change windows for integration worker config changes',
+      'Check retry/backoff policy to reduce burst pressure',
+    ],
+  },
+  {
+    id: 'KA-0634',
+    title: 'Vault PKI Certificate Renewal Runbook',
+    tags: ['vault', 'certificate', 'pki', 'tls', 'renewal'],
+    summary: 'Expiring certificates usually map to failed PKI CronJobs or RBAC drift in renewal namespaces.',
+    nextActions: [
+      'Verify certificate expiry and issuer chain from vault-01',
+      'Run PKI renewal job manually and review RBAC permissions',
+      'Stage rolling restart after new cert propagation',
+    ],
+  },
+  {
+    id: 'KA-1102',
+    title: 'Neo4j Latency After Unbounded Traversal Queries',
+    tags: ['neo4j', 'latency', 'cypher', 'index'],
+    summary: 'P95 query spikes are often caused by unbounded traversals and index fragmentation after imports.',
+    nextActions: [
+      'Run query profile for top offenders and enforce traversal depth limits',
+      'Inspect index health with db.indexes()',
+      'Throttle background ingestion jobs while rebuilding indexes',
+    ],
+  },
+  {
+    id: 'KA-1320',
+    title: 'Network Edge Incident Correlation (Cisco/Palo Alto/Fortinet/F5)',
+    tags: ['cisco', 'palo alto', 'fortinet', 'f5', 'network', 'firewall', 'load balancer'],
+    summary: 'Edge incidents correlate best when config-change windows and traffic/error anomalies overlap on shared CIs.',
+    nextActions: [
+      'Cross-check ServiceNow change records +/- 15 minutes around the first alert',
+      'Confirm CI overlap across router, firewall, and ADC nodes',
+      'Use confidence threshold >= 70% for grouped escalation',
+    ],
+  },
+];
+
+const INCIDENT_SIGNALS: IncidentSignal[] = [
+  {
+    id: 'INC-2401',
+    title: 'ServiceNow API timeout cascade',
+    source: 'ServiceNow',
+    status: 'In Progress',
+    tags: ['servicenow', 'timeout', 'integration'],
+  },
+  {
+    id: 'INC-2351',
+    title: 'Cisco core router BGP flap storm',
+    source: 'Cisco',
+    status: 'Investigating',
+    tags: ['cisco', 'router', 'bgp', 'network'],
+  },
+  {
+    id: 'INC-2350',
+    title: 'Palo Alto policy push rollback',
+    source: 'Palo Alto',
+    status: 'In Progress',
+    tags: ['palo alto', 'firewall', 'policy'],
+  },
+  {
+    id: 'INC-2348',
+    title: 'Fortinet HA failover jitter',
+    source: 'Fortinet',
+    status: 'Monitoring',
+    tags: ['fortinet', 'ha', 'firewall'],
+  },
+  {
+    id: 'INC-2347',
+    title: 'F5 BIG-IP iRule regression',
+    source: 'F5',
+    status: 'Open',
+    tags: ['f5', 'bigip', 'irule', 'load balancer'],
+  },
+];
+
+const CORRELATION_GROUPS = [
+  { id: 'CG-041', name: 'API Timeout + DB Slow Query Cluster', confidence: 87 },
+  { id: 'CG-052', name: 'Network Edge Config Drift (Cisco/Palo Alto/Fortinet/F5)', confidence: 79 },
+  { id: 'CG-040', name: 'Vault Auth Errors -> Keycloak Degradation', confidence: 72 },
+];
+
 const INITIAL_SESSIONS: Session[] = [
   {
     id: 's1',
@@ -96,11 +203,104 @@ export default function ChatPage() {
 
   const activeSession = sessions.find((s) => s.id === activeId) ?? sessions[0]!;
 
+  const getAuthHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Trace-Id': `portal-chat-${Date.now()}`,
+    };
+
+    const token = (typeof window !== 'undefined' ? localStorage.getItem('iivkis_token') : null)
+      || process.env.NEXT_PUBLIC_DEV_BEARER_TOKEN
+      || '';
+
+    if (token) {
+      headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    } else {
+      headers['x-dev-user-id'] = 'portal-user';
+      headers['x-dev-tenant-id'] = 'tenant-uat';
+    }
+    return headers;
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => { scrollToBottom(); }, [activeSession?.messages.length, isTyping]);
+
+  const scoreByKeywords = (text: string, keywords: string[]): number => {
+    const normalized = text.toLowerCase();
+    return keywords.reduce((score, keyword) => score + (normalized.includes(keyword) ? 1 : 0), 0);
+  };
+
+  const buildAssistantResponse = (query: string): string => {
+    const q = query.toLowerCase();
+
+    const rankedArticles = KB_ARTICLES
+      .map((article) => ({ article, score: scoreByKeywords(q, article.tags) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2)
+      .map((x) => x.article);
+
+    const relatedIncidents = INCIDENT_SIGNALS
+      .filter((inc) => scoreByKeywords(q, [inc.source.toLowerCase(), ...inc.tags]) > 0)
+      .slice(0, 3);
+
+    const relatedCorrelation = CORRELATION_GROUPS
+      .filter((g) => {
+        if (q.includes('network') || q.includes('cisco') || q.includes('palo') || q.includes('fortinet') || q.includes('f5')) {
+          return g.id === 'CG-052';
+        }
+        if (q.includes('servicenow') || q.includes('timeout')) {
+          return g.id === 'CG-041';
+        }
+        if (q.includes('vault') || q.includes('certificate')) {
+          return g.id === 'CG-040';
+        }
+        return false;
+      })
+      .slice(0, 1);
+
+    const lines: string[] = [];
+    lines.push('I analyzed your query against the current incident and knowledge context.');
+
+    if (rankedArticles.length > 0) {
+      lines.push('');
+      lines.push('**Top knowledge matches:**');
+      rankedArticles.forEach((a) => {
+        lines.push(`- **${a.id} — ${a.title}**: ${a.summary}`);
+      });
+    }
+
+    if (relatedIncidents.length > 0) {
+      lines.push('');
+      lines.push('**Related incidents:**');
+      relatedIncidents.forEach((inc) => {
+        lines.push(`- ${inc.id} (${inc.source}) — ${inc.title} [${inc.status}]`);
+      });
+    }
+
+    if (relatedCorrelation.length > 0) {
+      lines.push('');
+      lines.push('**Correlation insight:**');
+      lines.push(`- ${relatedCorrelation[0].id} — ${relatedCorrelation[0].name} (confidence ${relatedCorrelation[0].confidence}%)`);
+    }
+
+    const chosenArticle = rankedArticles[0];
+    if (chosenArticle) {
+      lines.push('');
+      lines.push('**Recommended next actions:**');
+      chosenArticle.nextActions.forEach((step, idx) => {
+        lines.push(`${idx + 1}. ${step}`);
+      });
+    } else {
+      lines.push('');
+      lines.push('Please share the vendor/system name, incident ID, and time window so I can produce targeted troubleshooting steps.');
+    }
+
+    return lines.join('\n');
+  };
 
   const handleTextareaInput = () => {
     const ta = textareaRef.current;
@@ -109,30 +309,70 @@ export default function ChatPage() {
     ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     const text = input.trim();
     if (!text) return;
 
+    const sessionId = activeId;
+    const sessionSnapshot = sessions.find((s) => s.id === sessionId);
+
     const userMsg: Message = { id: `m${Date.now()}`, role: 'user', content: text, time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) };
     setSessions((prev) =>
-      prev.map((s) => s.id === activeId ? { ...s, messages: [...s.messages, userMsg], preview: text } : s)
+      prev.map((s) => s.id === sessionId ? { ...s, messages: [...s.messages, userMsg], preview: text } : s)
     );
     setInput('');
     if (textareaRef.current) { textareaRef.current.style.height = '44px'; }
     setIsTyping(true);
 
-    setTimeout(() => {
+    const historyForApi = [
+      ...(sessionSnapshot?.messages ?? []).map((m) => ({ role: m.role, content: m.content })),
+      { role: 'user', content: text },
+    ];
+
+    try {
+      const response = await fetch('/api/chat/reply', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          content: text,
+          messages: historyForApi,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        data?: { content?: string; status?: string };
+        error?: { message?: string };
+      };
+
+      const apiContent = payload.data?.content?.trim();
+      const aiContent = apiContent && apiContent.length > 0
+        ? apiContent
+        : payload.error?.message ||
+          'AI backend is unavailable. Please verify API/orchestrator services and LLM configuration.';
+
       const aiMsg: Message = {
         id: `m${Date.now() + 1}`,
         role: 'assistant',
-        content: `I'm analyzing your query against the IIVKIS knowledge base and current incident data. I found **2 related knowledge articles** and **1 active correlation group** that may be relevant. Let me compile a structured response with recommended actions.`,
+        content: aiContent,
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      };
+
+      setSessions((prev) =>
+        prev.map((s) => s.id === sessionId ? { ...s, messages: [...s.messages, aiMsg] } : s)
+      );
+    } catch {
+      const aiMsg: Message = {
+        id: `m${Date.now() + 1}`,
+        role: 'assistant',
+        content: buildAssistantResponse(text),
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
       };
       setSessions((prev) =>
-        prev.map((s) => s.id === activeId ? { ...s, messages: [...s.messages, aiMsg] } : s)
+        prev.map((s) => s.id === sessionId ? { ...s, messages: [...s.messages, aiMsg] } : s)
       );
+    } finally {
       setIsTyping(false);
-    }, 1800);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -187,7 +427,7 @@ export default function ChatPage() {
       <div className="chat-main">
         <div className="chat-header">
           <div className="chat-header-title">{activeSession.title}</div>
-          <span className="model-badge">GPT-4o</span>
+          <span className="model-badge">AI Live</span>
           <button className="btn-ghost" style={{ padding: '0.4rem 0.875rem', fontSize: '0.8rem' }}>Clear</button>
         </div>
 

@@ -1,8 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { isConsoleAuthenticated, readConsoleMode, type ConsoleMode } from './lib/console-mode';
 
-const METRIC_CARDS = [
+const OPERATOR_METRIC_CARDS = [
+  { title: 'Active Tenants', value: '42', icon: '🏢', color: 'var(--color-cyan)', trend: '+2', trendDir: 'up' as const },
+  { title: 'Resource Utilization', value: '71%', icon: '🖥️', color: 'var(--color-amber)', trend: '+4%', trendDir: 'up' as const },
+  { title: 'Telemetry Throughput', value: '12.4k/s', icon: '📡', color: 'var(--color-violet)', trend: '+1.8k/s', trendDir: 'up' as const },
+  { title: 'Billing Generated', value: '$84,290', icon: '💳', color: 'var(--color-green)', trend: '+$3,410', trendDir: 'up' as const },
+] as const;
+
+const END_USER_METRIC_CARDS = [
   { title: 'Active Incidents', value: '24', icon: '🚨', color: 'var(--color-coral)', trend: '+3', trendDir: 'up' as const },
   { title: 'Correlation Groups', value: '7', icon: '🔗', color: 'var(--color-cyan)', trend: '-2', trendDir: 'down' as const },
   { title: 'Knowledge Articles', value: '1,248', icon: '📚', color: 'var(--color-violet)', trend: '+12', trendDir: 'up' as const },
@@ -48,6 +56,7 @@ const VENDOR_PROOF = [
 
 export default function DashboardPage() {
   const [time, setTime] = useState('');
+  const [mode, setMode] = useState<ConsoleMode>('operator');
 
   useEffect(() => {
     const tick = () => setTime(new Date().toLocaleTimeString('en-US', { hour12: false }));
@@ -56,13 +65,34 @@ export default function DashboardPage() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    setMode(readConsoleMode());
+  }, []);
+
+  const metricCards = mode === 'operator' ? OPERATOR_METRIC_CARDS : END_USER_METRIC_CARDS;
+
+  if (!isConsoleAuthenticated(mode)) {
+    return (
+      <div style={{ padding: '2rem' }}>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div className="page-title" style={{ marginBottom: '0.5rem' }}>Session Logged Out</div>
+          <div className="page-subtitle">Use the sidebar to login as Operator or End User.</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Page Header */}
       <div className="page-header">
         <div>
           <div className="page-title">IIVKIS Operations Dashboard</div>
-          <div className="page-subtitle">Real-time infrastructure intelligence</div>
+          <div className="page-subtitle">
+            {mode === 'operator'
+              ? 'Operator console · tenant governance, telemetry and billing'
+              : 'End-user console · customer incident intelligence'}
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <span className="metric-value" style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
@@ -74,14 +104,14 @@ export default function DashboardPage() {
 
       {/* Metric Cards */}
       <div className="metrics-grid">
-        {METRIC_CARDS.map((card) => (
+        {metricCards.map((card) => (
           <div key={card.title} className="glass-card metric-card">
             <div className="metric-card-header">
               <span className="metric-card-title">{card.title}</span>
               <span className="metric-card-icon">{card.icon}</span>
             </div>
             <div className="metric-card-value" style={{ color: card.color }}>{card.value}</div>
-            <div className={`metric-card-trend trend-${card.trendDir === 'up' ? (card.title === 'Knowledge Articles' ? 'down' : 'up') : 'down'}`}>
+            <div className={`metric-card-trend trend-${card.trendDir === 'up' ? 'up' : 'down'}`}>
               <span>{card.trendDir === 'up' ? '▲' : '▼'}</span>
               <span>{card.trend} from yesterday</span>
             </div>
@@ -216,15 +246,32 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <div className="glass-card section-card" style={{ flex: 1 }}>
-            <div className="section-title"><span>🧪</span> Vendor Proof</div>
-            {VENDOR_PROOF.map((item) => (
-              <div key={item.vendor} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.55rem', fontSize: '0.77rem' }}>
-                <span style={{ color: 'var(--color-text-secondary)' }}>{item.vendor}</span>
-                <span style={{ color: 'var(--color-text-muted)', textAlign: 'right' }}>{item.example}</span>
-              </div>
-            ))}
-          </div>
+          {mode === 'operator' ? (
+            <div className="glass-card section-card" style={{ flex: 1 }}>
+              <div className="section-title"><span>📦</span> Tenant Capacity</div>
+              {[
+                { label: 'T1 Tenants', value: '28' },
+                { label: 'T2 Tenants', value: '11' },
+                { label: 'T3 Tenants', value: '3' },
+                { label: 'Noisy Tenant Alerts', value: '2' },
+              ].map((item) => (
+                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.45rem', fontSize: '0.77rem' }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>{item.label}</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="glass-card section-card" style={{ flex: 1 }}>
+              <div className="section-title"><span>🧪</span> Vendor Proof</div>
+              {VENDOR_PROOF.map((item) => (
+                <div key={item.vendor} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.55rem', fontSize: '0.77rem' }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>{item.vendor}</span>
+                  <span style={{ color: 'var(--color-text-muted)', textAlign: 'right' }}>{item.example}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

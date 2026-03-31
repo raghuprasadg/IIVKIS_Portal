@@ -29,25 +29,74 @@ async function callOrchestrator(payload: Record<string, unknown>): Promise<Recor
   const orchestratorUrl = process.env['ORCHESTRATOR_URL'];
   if (!orchestratorUrl) throw new AppError(503, 'ORCHESTRATOR_UNAVAILABLE', 'ORCHESTRATOR_URL is not configured');
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => { controller.abort(); }, 30_000);
-
-  try {
-    const resp = await fetch(`${orchestratorUrl}/tasks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!resp.ok) throw new AppError(502, 'ORCHESTRATOR_ERROR', `Orchestrator returned ${resp.status}`);
-    return (await resp.json()) as Record<string, unknown>;
-  } catch (err: unknown) {
-    clearTimeout(timeout);
-    if (err instanceof AppError) throw err;
-    throw new AppError(503, 'ORCHESTRATOR_UNAVAILABLE', 'Could not reach orchestrator');
+  for (const path of ['/tasks', '/orchestrate']) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => { controller.abort(); }, 30_000);
+    try {
+      const resp = await fetch(`${orchestratorUrl}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (resp.status === 404) continue;
+      if (!resp.ok) {
+        throw new AppError(502, 'ORCHESTRATOR_ERROR', `Orchestrator returned ${resp.status}`);
+      }
+      return (await resp.json()) as Record<string, unknown>;
+    } catch (err: unknown) {
+      clearTimeout(timeout);
+      if (err instanceof AppError) throw err;
+    }
   }
+
+  throw new AppError(503, 'ORCHESTRATOR_UNAVAILABLE', 'Could not reach orchestrator');
 }
+
+// ── Direct reply (no DB persistence) ─────────────────────────────────────────
+chatRouter.post('/reply', async (req: Request, res: Response) => {
+  const { content, messages } = req.body as {
+    content?: string;
+    messages?: Array<{ role?: string; content?: string }>;
+  };
+
+  if (!content) throw new AppError(400, 'VALIDATION_ERROR', 'content is required');
+
+  const normalizedMessages = Array.isArray(messages) && messages.length > 0
+    ? messages
+      .filter((m): m is { role: string; content: string } => !!m?.role && !!m?.content)
+      .map((m) => ({ role: m.role, content: m.content }))
+    : [{ role: 'user', content }];
+
+  const taskId = randomUUID();
+  const agentResponse = await callOrchestrator({
+    taskId,
+    taskType: 'ts.chat.turn',
+    tenantId: req.user!.tenantId,
+    userId: req.user!.userId,
+    traceId: req.traceId ?? taskId,
+    spanId: randomUUID(),
+    payload: { sessionId: 'adhoc', messages: normalizedMessages },
+    timeoutMs: 25_000,
+    createdAt: new Date().toISOString(),
+  });
+
+  const assistantContent =
+    (agentResponse['result'] as Record<string, unknown> | undefined)?.['content'] as string
+    ?? (agentResponse['error'] as Record<string, unknown> | undefined)?.['message'] as string
+    ?? 'I could not generate a response.';
+
+  res.status(200).json({
+    data: {
+      role: 'assistant',
+      content: assistantContent,
+      modelUsed: agentResponse['modelUsed'] ?? null,
+      tokensUsed: agentResponse['tokensUsed'] ?? null,
+      status: agentResponse['status'] ?? 'failed',
+    },
+  });
+});
 
 // ── List sessions ──────────────────────────────────────────────────────────────
 chatRouter.get('/sessions', async (req: Request, res: Response) => {

@@ -2,6 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { readConsoleMode, saveConsoleMode, type ConsoleMode } from './lib/console-mode';
 
 const NAV_ITEMS = [
   { href: '/', icon: '📊', label: 'Dashboard' },
@@ -16,6 +18,24 @@ const NAV_ITEMS = [
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const [mode, setMode] = useState<ConsoleMode>('operator');
+
+  useEffect(() => {
+    setMode(readConsoleMode());
+  }, []);
+
+  const switchMode = (next: ConsoleMode) => {
+    saveConsoleMode(next);
+    setMode(next);
+    window.location.reload();
+  };
+
+  const roleLabel = mode === 'operator'
+    ? 'Operator'
+    : mode === 'end-user'
+      ? 'End User'
+      : 'Logged Out';
+  const avatar = mode === 'operator' ? 'OP' : mode === 'end-user' ? 'EU' : '--';
 
   return (
     <nav className="sidebar">
@@ -43,12 +63,36 @@ export default function AppSidebar() {
       </div>
 
       <div className="sidebar-footer">
-        <div className="user-avatar">OP</div>
-        <div>
-          <div style={{ fontSize: '0.78rem', fontWeight: 600 }}>Operator</div>
-          <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>Admin</div>
+        <div className="user-avatar">{avatar}</div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 600 }}>{roleLabel}</div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>
+            {mode === 'operator' ? 'Platform Console' : mode === 'end-user' ? 'Customer Console' : 'Session ended'}
+          </div>
         </div>
         <span className="version-badge">v0.5.0</span>
+      </div>
+
+      <div style={{ padding: '0.65rem 1rem 1rem', borderTop: '1px solid var(--color-glass-border)' }}>
+        {mode === 'logged-out' ? (
+          <div style={{ display: 'grid', gap: '0.45rem' }}>
+            <button className="btn-primary" style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.74rem' }} onClick={() => switchMode('operator')}>
+              Login As Operator
+            </button>
+            <button className="btn-ghost" style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.74rem' }} onClick={() => switchMode('end-user')}>
+              Login As End User
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '0.45rem' }}>
+            <button className="btn-ghost" style={{ width: '100%', padding: '0.42rem 0.65rem', fontSize: '0.72rem' }} onClick={() => switchMode(mode === 'operator' ? 'end-user' : 'operator')}>
+              Switch To {mode === 'operator' ? 'End User' : 'Operator'} Console
+            </button>
+            <button className="btn-ghost" style={{ width: '100%', padding: '0.42rem 0.65rem', fontSize: '0.72rem', borderColor: 'rgba(255,107,107,0.35)', color: 'var(--color-coral)' }} onClick={() => switchMode('logged-out')}>
+              Logout
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );
