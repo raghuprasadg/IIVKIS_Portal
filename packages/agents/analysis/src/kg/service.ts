@@ -11,6 +11,7 @@
  */
 
 import { createHash } from 'crypto';
+import neo4j, { type Driver } from 'neo4j-driver';
 
 export interface KGTopologyInfo {
   /** Hop distance from the tenant root CI (0 = root, 1 = direct child, …). */
@@ -21,9 +22,19 @@ export interface KGTopologyInfo {
 
 export class KGService {
   private readonly isStub: boolean;
+  private readonly driver?: Driver;
 
   constructor() {
     this.isStub = !process.env['NEO4J_URI'];
+    if (!this.isStub) {
+      this.driver = neo4j.driver(
+        process.env['NEO4J_URI']!,
+        neo4j.auth.basic(
+          process.env['NEO4J_USER'] ?? 'neo4j',
+          process.env['NEO4J_PASSWORD'] ?? 'iivkis_dev_pass',
+        ),
+      );
+    }
     if (this.isStub) {
       console.log('[KGService] No NEO4J_URI set — operating in topology-stub mode.');
     }
@@ -39,8 +50,31 @@ export class KGService {
     if (this.isStub) {
       return this.stubTopologyInfo(ciId);
     }
-    // Production path — reserved for Neo4j Bolt query
-    return this.stubTopologyInfo(ciId);
+
+    const session = this.driver!.session();
+    try {
+      const result = await session.run(
+        `
+        MATCH (c:CI {id: $ciId})
+        OPTIONAL MATCH p=(c)-[:PART_OF|DEPENDS_ON*1..4]->(:CI)
+        WITH c, min(length(p)) AS minDepth
+        OPTIONAL MATCH (c)-[:DEPENDS_ON]->(n:CI)
+        RETURN coalesce(minDepth, 0) AS topologyDepth, collect(DISTINCT n.id) AS neighbors
+        `,
+        { ciId },
+      );
+
+      const row = result.records[0];
+      if (!row) return this.stubTopologyInfo(ciId);
+
+      const topologyDepth = Number(row.get('topologyDepth'));
+      const neighbors = (row.get('neighbors') as string[]).filter(Boolean);
+      return { topologyDepth, neighbors };
+    } catch {
+      return this.stubTopologyInfo(ciId);
+    } finally {
+      await session.close();
+    }
   }
 
   /**
@@ -70,5 +104,64 @@ export class KGService {
     const neighbors = depth < 3 ? [neighbor1, neighbor2] : [];
 
     return { topologyDepth: depth, neighbors };
+  }
+
+  async addEvent(eventId: string, ciId: string, payload: Record<string, unknown>): Promise<void> {
+    if (this.isStub) return;
+    const session = this.driver!.session();
+    try {
+      await session.run(
+        `
+        MERGE (e:Event {id: $eventId})
+        SET e += $payload
+        MERGE (c:CI {id: $ciId})
+        MERGE (e)-[:AFFECTS]->(c)
+        `,
+        { eventId, ciId, payload },
+      );
+    } finally {
+      await session.close();
+    }
+  }
+
+  async linkCi(fromCiId: string, toCiId: string): Promise<void> {
+    if (this.isStub) return;
+    const session = this.driver!.session();
+    try {
+      await session.run(
+        `
+        MERGE (a:CI {id: $fromCiId})
+        MERGE (b:CI {id: $toCiId})
+        MERGE (a)-[:DEPENDS_ON]->(b)
+        `,
+        { fromCiId, toCiId },
+      );
+    } finally {
+      await session.close();
+    }
+  }
+
+  async traverseGraph(ciId: string, maxHops = 2): Promise<string[]> {
+    if (this.isStub) {
+      return this.stubTopologyInfo(ciId).neighbors;
+    }
+
+    const session = this.driver!.session();
+    try {
+      const result = await session.run(
+        `
+        MATCH p=(c:CI {id: $ciId})-[:DEPENDS_ON*1..4]->(n:CI)
+        WHERE length(p) <= $maxHops
+        RETURN collect(DISTINCT n.id) AS ids
+        `,
+        { ciId, maxHops: neo4j.int(maxHops) },
+      );
+      const row = result.records[0];
+      return row ? (row.get('ids') as string[]) : [];
+    } catch {
+      return [];
+    } finally {
+      await session.close();
+    }
   }
 }

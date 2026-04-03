@@ -71,6 +71,13 @@ COPY packages/agents/vendor-knowledge/tsconfig.json ./packages/agents/vendor-kno
 COPY apps/orchestrator/src                    ./apps/orchestrator/src
 COPY apps/orchestrator/tsconfig.json          ./apps/orchestrator/
 
+# Build workspace packages so dist/index.js exists for runtime resolution
+RUN npm run build --workspace=packages/shared
+RUN npm run build --workspace=packages/agents/analysis
+RUN npm run build --workspace=packages/agents/integration
+RUN npm run build --workspace=packages/agents/troubleshooting
+RUN npm run build --workspace=packages/agents/vendor-knowledge
+
 WORKDIR /app/apps/orchestrator
 EXPOSE 5000
 ENV NODE_ENV=development

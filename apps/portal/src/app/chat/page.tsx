@@ -198,6 +198,7 @@ export default function ChatPage() {
   const [activeId, setActiveId] = useState<string>('s1');
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [displayName, setDisplayName] = useState('Operator');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -227,6 +228,42 @@ export default function ChatPage() {
   };
 
   useEffect(() => { scrollToBottom(); }, [activeSession?.messages.length, isTyping]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const fromStorage =
+      localStorage.getItem('iivkis_user_name')
+      || localStorage.getItem('user_name')
+      || localStorage.getItem('username')
+      || localStorage.getItem('displayName')
+      || '';
+
+    const normalized = fromStorage.trim();
+    if (normalized) setDisplayName(normalized);
+  }, []);
+
+  const buildWelcomeMessage = (name: string): string => {
+    return `Hi ${name}, I am your IIVKIS co-working assistant. I can work with you on incidents, correlations, and runbooks. Share an incident ID or goal, and we will triage it together.`;
+  };
+
+  useEffect(() => {
+    if (!activeSession) return;
+    if (activeSession.messages.length > 0) return;
+
+    const welcomeMessage: Message = {
+      id: `m${Date.now()}`,
+      role: 'assistant',
+      content: buildWelcomeMessage(displayName),
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    };
+
+    setSessions((prev) =>
+      prev.map((s) => (s.id === activeSession.id && s.messages.length === 0)
+        ? { ...s, messages: [welcomeMessage], preview: `Welcome ${displayName}` }
+        : s)
+    );
+  }, [activeId, activeSession, displayName]);
 
   const scoreByKeywords = (text: string, keywords: string[]): number => {
     const normalized = text.toLowerCase();
@@ -281,10 +318,11 @@ export default function ChatPage() {
       });
     }
 
-    if (relatedCorrelation.length > 0) {
+    const topCorrelation = relatedCorrelation[0];
+    if (topCorrelation) {
       lines.push('');
       lines.push('**Correlation insight:**');
-      lines.push(`- ${relatedCorrelation[0].id} — ${relatedCorrelation[0].name} (confidence ${relatedCorrelation[0].confidence}%)`);
+      lines.push(`- ${topCorrelation.id} — ${topCorrelation.name} (confidence ${topCorrelation.confidence}%)`);
     }
 
     const chosenArticle = rankedArticles[0];
@@ -344,10 +382,19 @@ export default function ChatPage() {
         error?: { message?: string };
       };
 
+      const normalizeBackendError = (message?: string): string | null => {
+        if (!message) return null;
+        const lower = message.toLowerCase();
+        if (lower.includes('fetch failed') || lower.includes('could not reach orchestrator')) {
+          return 'I could not reach the orchestration service right now. Check ORCHESTRATOR_URL and ensure the orchestrator is running and reachable from the portal service.';
+        }
+        return message;
+      };
+
       const apiContent = payload.data?.content?.trim();
       const aiContent = apiContent && apiContent.length > 0
         ? apiContent
-        : payload.error?.message ||
+        : normalizeBackendError(payload.error?.message) ||
           'AI backend is unavailable. Please verify API/orchestrator services and LLM configuration.';
 
       const aiMsg: Message = {
@@ -381,7 +428,22 @@ export default function ChatPage() {
 
   const newChat = () => {
     const id = `s${Date.now()}`;
-    const newSession: Session = { id, title: 'New Conversation', preview: 'Start a new conversation...', time: 'Now', messages: [] };
+    const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const welcomeMessage: Message = {
+      id: `m${Date.now()}`,
+      role: 'assistant',
+      content: buildWelcomeMessage(displayName),
+      time: now,
+    };
+
+    const newSession: Session = {
+      id,
+      title: 'New Conversation',
+      preview: `Welcome ${displayName}`,
+      time: 'Now',
+      messages: [welcomeMessage],
+    };
+
     setSessions((prev) => [newSession, ...prev]);
     setActiveId(id);
   };
@@ -435,8 +497,12 @@ export default function ChatPage() {
           {activeSession.messages.length === 0 && (
             <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginTop: '4rem', animation: 'fade-in 0.5s ease' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>💬</div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Start a conversation</div>
-              <div style={{ fontSize: '0.82rem', marginTop: '0.5rem' }}>Ask about incidents, knowledge articles, or correlations</div>
+              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                Hi {displayName}, ready to co-work?
+              </div>
+              <div style={{ fontSize: '0.82rem', marginTop: '0.5rem' }}>
+                I will assist with incidents, knowledge lookups, and correlation decisions.
+              </div>
             </div>
           )}
 

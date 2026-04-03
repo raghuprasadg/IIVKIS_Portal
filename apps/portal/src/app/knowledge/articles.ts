@@ -1,0 +1,186 @@
+export interface KnowledgeArticle {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  tags: string[];
+  references: string[];
+  views: number;
+  updated: string;
+  author: string;
+}
+
+export const KNOWLEDGE_ARTICLES = [
+  {
+    id: 'KB-0291',
+    title: 'ServiceNow REST API rate-limiting & retry strategy',
+    content: 'Use bounded retries with jitter. Retry only idempotent operations on 429/503. Track x-rate-limit headers and short-circuit retries when remaining quota is near zero. Persist incident sync offsets to avoid duplicate writes during replay windows.',
+    category: 'Integration',
+    tags: ['servicenow', 'api', 'retry'],
+    references: ['prod-servicenow-api', 'ci-svc-orchestrator'],
+    views: 342,
+    updated: '2024-01-14',
+    author: 'SK',
+  },
+  {
+    id: 'KB-0288',
+    title: 'Vault certificate lifecycle - renewal runbook',
+    content: 'Renew certificates proactively at 70 percent validity. Validate chain trust on all consumers before promotion. If renewal fails, disable auto-rollout and issue short-lived fallback certs from the emergency path. Always rotate AppRole secret IDs after emergency issuance.',
+    category: 'Security',
+    tags: ['vault', 'certs', 'pki'],
+    references: ['prod-hashicorp-vault', 'ci-svc-api', 'ci-svc-keycloak'],
+    views: 218,
+    updated: '2024-01-13',
+    author: 'JR',
+  },
+  {
+    id: 'KB-0285',
+    title: 'Neo4j query optimisation - index hints and profiling',
+    content: 'Start with PROFILE to identify DB hits and expand-heavy operators. Add composite indexes for tenantId plus frequently filtered fields. Use pattern comprehensions instead of repeated OPTIONAL MATCH blocks. Keep traversal depth bounded and project only required properties.',
+    category: 'Database',
+    tags: ['neo4j', 'performance', 'cypher'],
+    references: ['prod-neo4j', 'ci-svc-knowledge', 'adv-pg-cve-2024-0985'],
+    views: 176,
+    updated: '2024-01-12',
+    author: 'TL',
+  },
+  {
+    id: 'KB-0281',
+    title: 'Redis cluster eviction policies - best practices',
+    content: 'For mixed workloads, prefer allkeys-lru and reserve memory headroom for replication buffers. Alert when used memory crosses 85 percent. For session workloads, isolate session keys into dedicated DBs and enforce TTL to prevent stale growth.',
+    category: 'Database',
+    tags: ['redis', 'memory', 'eviction'],
+    references: ['prod-redis-cluster', 'ci-svc-auth'],
+    views: 455,
+    updated: '2024-01-11',
+    author: 'AM',
+  },
+  {
+    id: 'KB-0278',
+    title: 'Keycloak realm configuration for multi-tenant OIDC',
+    content: 'Use tenant-specific client scopes and mappers for isolation. Do not share refresh-token audiences across tenants. Enable rotating keys and tune token lifespan per client risk profile. Validate issuer and audience in all downstream services.',
+    category: 'Auth',
+    tags: ['keycloak', 'oidc', 'multi-tenant'],
+    references: ['prod-keycloak', 'ci-svc-auth', 'ci-svc-api'],
+    views: 389,
+    updated: '2024-01-10',
+    author: 'BW',
+  },
+  {
+    id: 'KB-0274',
+    title: 'Prometheus alerting rules - SLA breach detection',
+    content: 'Create multi-window burn-rate alerts for high severity incidents. Pair fast and slow windows to reduce noise while preserving responsiveness. Include runbook_url and owning team labels. Route sustained breaches to escalation channels automatically.',
+    category: 'Observability',
+    tags: ['prometheus', 'alerting', 'sla'],
+    references: ['prod-prometheus', 'ci-svc-observability'],
+    views: 207,
+    updated: '2024-01-09',
+    author: 'JR',
+  },
+  {
+    id: 'KB-0271',
+    title: 'Jira webhook integration - troubleshooting delivery failures',
+    content: 'Verify webhook signing secret, endpoint TLS chain, and timeout thresholds. Capture X-Atlassian-Webhook-Identifier for replay tracking. For intermittent failures, implement idempotency by issue key plus update sequence and replay from dead-letter queue.',
+    category: 'Integration',
+    tags: ['jira', 'webhook', 'debug'],
+    references: ['prod-jira-cloud', 'ci-svc-orchestrator'],
+    views: 134,
+    updated: '2024-01-08',
+    author: 'SK',
+  },
+  {
+    id: 'KB-0268',
+    title: 'PagerDuty escalation policy design - on-call best practices',
+    content: 'Align escalation timing to service SLO impact, not team size. Define clear ownership boundaries and handoff runbooks. Use event dedup keys to reduce alert floods and prevent policy churn during coordinated incidents.',
+    category: 'Operations',
+    tags: ['pagerduty', 'oncall', 'escalation'],
+    references: ['prod-pagerduty', 'ci-svc-incident-ops'],
+    views: 298,
+    updated: '2024-01-07',
+    author: 'TL',
+  },
+  {
+    id: 'KB-0266',
+    title: 'Datadog monitor triage - replica lag, node OOM, and APM evidence',
+    content: 'Triage in this order: blast radius, data-loss risk, then user impact. Correlate DB replica lag metrics with node memory pressure and trace latency. Snapshot monitor state changes to preserve causal timeline before remediation begins.',
+    category: 'Observability',
+    tags: ['datadog', 'apm', 'monitor', 'replication'],
+    references: ['prod-datadog', 'ci-db-pg-replica', 'ci-k8s-nodes'],
+    views: 261,
+    updated: '2024-01-06',
+    author: 'AM',
+  },
+  {
+    id: 'KB-0263',
+    title: 'Grafana alert storm suppression - pending periods and label grouping',
+    content: 'Apply longer pending periods on noisy metrics and collapse labels that represent the same failure domain. Keep high-cardinality labels out of alert grouping keys. Validate dedup effectiveness against historical incident windows.',
+    category: 'Observability',
+    tags: ['grafana', 'alerts', 'dedup', 'dashboards'],
+    references: ['prod-grafana', 'prod-prometheus'],
+    views: 223,
+    updated: '2024-01-05',
+    author: 'JR',
+  },
+  {
+    id: 'KB-0260',
+    title: 'Splunk timeline reconstruction for orchestrator retry failures',
+    content: 'Reconstruct traces by grouping logs on traceId and taskId. Compare retry backoff windows against connector response latency to identify retry amplification. Use saved searches to produce operator-ready timelines for postmortems.',
+    category: 'Operations',
+    tags: ['splunk', 'logs', 'orchestrator', 'timeline'],
+    references: ['prod-splunk', 'ci-svc-orchestrator'],
+    views: 188,
+    updated: '2024-01-04',
+    author: 'TL',
+  },
+  {
+    id: 'KB-0257',
+    title: 'GitHub deployment evidence - mapping failing rollouts to incidents',
+    content: 'Capture deployment SHA, environment, and rollout phase with incident events. Automatically annotate incidents with workflow IDs and failed jobs. Block silent rollbacks by requiring change-ticket links on rollback actions.',
+    category: 'Integration',
+    tags: ['github', 'actions', 'deployments', 'rollback'],
+    references: ['prod-github-actions', 'ci-svc-deployer'],
+    views: 167,
+    updated: '2024-01-03',
+    author: 'BW',
+  },
+  {
+    id: 'KB-0255',
+    title: 'AWS CloudWatch alarm normalization - EC2, EKS, and queue depth',
+    content: 'Normalize alarm severities into a platform-wide priority model before correlation. Preserve original dimensions for investigation but route using normalized classes. Suppress repetitive flapping alarms with time-bounded dampening windows.',
+    category: 'Cloud',
+    tags: ['cloudwatch', 'aws', 'alarms', 'eks'],
+    references: ['prod-aws-cloudwatch', 'ci-eks-cluster', 'ci-queue-core'],
+    views: 194,
+    updated: '2024-01-02',
+    author: 'SK',
+  },
+  {
+    id: 'KB-0252',
+    title: 'Zabbix problem severity mapping for legacy infrastructure',
+    content: 'Map Zabbix severities to platform priorities using deterministic rules and service criticality metadata. Preserve host groups to avoid mixing unrelated legacy domains. Track mapping drift by auditing unmapped event classes weekly.',
+    category: 'Infrastructure',
+    tags: ['zabbix', 'severity', 'legacy', 'json-rpc'],
+    references: ['prod-zabbix', 'ci-legacy-core'],
+    views: 143,
+    updated: '2024-01-01',
+    author: 'TL',
+  },
+  {
+    id: 'KB-0249',
+    title: 'Slack incident threads - operator approvals and war-room hygiene',
+    content: 'Use a single incident command channel with explicit role assignment and approval checkpoints. Keep decision logs pinned with timestamps and owners. Archive resolved threads with links to incident records and final remediation evidence.',
+    category: 'Operations',
+    tags: ['slack', 'threads', 'war-room', 'approvals'],
+    references: ['prod-slack', 'ci-svc-incident-ops'],
+    views: 279,
+    updated: '2023-12-31',
+    author: 'JR',
+  },
+] as const satisfies readonly KnowledgeArticle[];
+
+export const KNOWLEDGE_CATEGORIES = ['All', 'Integration', 'Security', 'Database', 'Auth', 'Observability', 'Operations', 'Cloud', 'Infrastructure'];
+export const FEATURED_VENDORS = ['ServiceNow', 'PagerDuty', 'Jira', 'Datadog', 'Grafana', 'Splunk', 'GitHub', 'CloudWatch', 'Zabbix', 'Slack'];
+
+export function getKnowledgeArticle(articleId: string) {
+  return KNOWLEDGE_ARTICLES.find((article) => article.id === articleId) ?? null;
+}

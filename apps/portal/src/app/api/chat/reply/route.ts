@@ -5,6 +5,34 @@ interface ChatRequestBody {
   messages?: Array<{ role?: string; content?: string }>;
 }
 
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/+$/, '');
+}
+
+function buildOrchestratorCandidates(): string[] {
+  const configured = [
+    process.env['ORCHESTRATOR_URL'],
+    process.env['NEXT_PUBLIC_ORCHESTRATOR_URL'],
+  ].filter((v): v is string => Boolean(v && v.trim()));
+
+  const expanded: string[] = [];
+  for (const raw of configured) {
+    const trimmed = raw.trim();
+    expanded.push(trimmed);
+
+    // In containerized runtime, localhost usually points to the portal container,
+    // so also try the internal service DNS name.
+    if (trimmed.includes('localhost') || trimmed.includes('127.0.0.1')) {
+      expanded.push(trimmed.replace('localhost', 'orchestrator').replace('127.0.0.1', 'orchestrator'));
+    }
+  }
+
+  expanded.push('http://orchestrator:5000');
+  expanded.push('http://127.0.0.1:5000');
+
+  return [...new Set(expanded.map(normalizeBaseUrl))];
+}
+
 function normalizeMessages(input: ChatRequestBody['messages'], content: string) {
   if (!Array.isArray(input) || input.length === 0) {
     return [{ role: 'user', content }];
@@ -18,80 +46,55 @@ function normalizeMessages(input: ChatRequestBody['messages'], content: string) 
     }));
 }
 
-async function callGeminiOpenAICompatible(messages: Array<{ role: string; content: string }>) {
-  const apiKey = process.env['GEMINI_API_KEY'] ?? process.env['LLM_API_KEY'] ?? '';
-  if (!apiKey) {
-    return null;
-  }
-
-  const baseUrl = process.env['GEMINI_BASE_URL'] ?? 'https://generativelanguage.googleapis.com/v1beta/openai';
-  const model = process.env['GEMINI_MODEL'] ?? 'gemini-2.5-flash';
-
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      max_tokens: 700,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are the IIVKIS troubleshooting copilot. Reply concisely with relevant analysis, likely causes, and next actions.',
-        },
-        ...messages,
-      ].slice(-24),
-    }),
-    signal: AbortSignal.timeout(30000),
-  });
-
-  const payload = (await response.json().catch(() => ({}))) as {
-    choices?: Array<{ message?: { content?: string } }>;
-    error?: { message?: string };
-  };
-
-  if (!response.ok) {
-    const message = payload.error?.message ?? `Provider returned HTTP ${response.status}`;
-    throw new Error(message);
-  }
-
-  return payload.choices?.[0]?.message?.content?.trim() ?? 'No content returned by provider.';
-}
-
 async function callOrchestrator(messages: Array<{ role: string; content: string }>) {
-  const orchestratorUrl = process.env['ORCHESTRATOR_URL'] ?? 'http://127.0.0.1:5000';
+  const tenantId = process.env['PORTAL_TENANT_ID'] ?? 'tenant-uat';
+  const userId = process.env['PORTAL_USER_ID'] ?? 'portal-user';
 
-  const response = await fetch(`${orchestratorUrl}/tasks`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      taskId: crypto.randomUUID(),
-      taskType: 'ts.chat.turn',
-      tenantId: 'tenant-uat',
-      userId: 'portal-user',
-      traceId: crypto.randomUUID(),
-      spanId: crypto.randomUUID(),
-      payload: { sessionId: 'portal-route', messages },
-      timeoutMs: 25000,
-      createdAt: new Date().toISOString(),
-    }),
-    signal: AbortSignal.timeout(30000),
-  });
+  const candidates = buildOrchestratorCandidates();
+  const paths = ['/tasks', '/orchestrate'];
+  const errors: string[] = [];
 
-  const payload = (await response.json().catch(() => ({}))) as {
-    result?: { content?: string };
-    error?: { message?: string };
-  };
+  for (const baseUrl of candidates) {
+    for (const path of paths) {
+      try {
+        const response = await fetch(`${baseUrl}${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId: crypto.randomUUID(),
+            taskType: 'ts.chat.turn',
+            tenantId,
+            userId,
+            traceId: crypto.randomUUID(),
+            spanId: crypto.randomUUID(),
+            payload: { sessionId: 'portal-route', messages },
+            timeoutMs: 25000,
+            createdAt: new Date().toISOString(),
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
 
-  if (!response.ok) {
-    throw new Error(payload.error?.message ?? `Orchestrator returned HTTP ${response.status}`);
+        const payload = (await response.json().catch(() => ({}))) as {
+          result?: { content?: string };
+          error?: { message?: string };
+        };
+
+        if (!response.ok) {
+          errors.push(`${baseUrl}${path} -> HTTP ${response.status}`);
+          continue;
+        }
+
+        return payload.result?.content?.trim() || payload.error?.message || 'No response returned by orchestrator.';
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        errors.push(`${baseUrl}${path} -> ${detail}`);
+      }
+    }
   }
 
-  return payload.result?.content?.trim() || payload.error?.message || 'No response returned by orchestrator.';
+  const checked = candidates.join(', ');
+  const lastError = errors.length > 0 ? errors[errors.length - 1] : 'No endpoint attempted';
+  throw new Error(`Could not reach orchestrator. Checked: ${checked}. Last error: ${lastError}`);
 }
 
 export async function POST(request: Request) {
@@ -108,11 +111,6 @@ export async function POST(request: Request) {
   const messages = normalizeMessages(body.messages, content);
 
   try {
-    const directProviderReply = await callGeminiOpenAICompatible(messages);
-    if (directProviderReply) {
-      return NextResponse.json({ data: { role: 'assistant', content: directProviderReply, status: 'success' } });
-    }
-
     const orchestratorReply = await callOrchestrator(messages);
     return NextResponse.json({ data: { role: 'assistant', content: orchestratorReply, status: 'success' } });
   } catch (error) {

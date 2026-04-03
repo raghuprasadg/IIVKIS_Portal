@@ -1,7 +1,7 @@
 # IIVKIS Low-Level Design (LLD)
 
 **Document ID:** IIVKIS-ARCH-002  
-**Version:** 1.0.1  
+**Version:** 1.0.2  
 **Status:** Validated — Phase 3 Validation Pass  
 **Phase:** STEP 3 — Architecture Design  
 **Author:** Architect Agent  
@@ -14,6 +14,16 @@
 |---|---|---|---|
 | 1.0.0 | 2026-03-28 | Architect Agent | Initial LLD — database schemas, API contracts, service interfaces, KG schema, CE state machine, LLM gateway internals |
 | 1.0.1 | 2026-03-28 | Architect Agent | Phase 3 Validation — added 6 missing routing entries, 5 missing DB schemas (notification_policies, chat_sessions/messages, feed_subscriptions, feature_flags), RLS on 5 tables (sla_policies, integration_events, subscriptions, usage_ledger, correlation_rules), FK on correlation_groups.root_cause_ci |
+| 1.0.2 | 2026-04-03 | Engineering Agent | Implementation-alignment metadata refresh — added runtime note for tenant-bound DB context and route/schema contract updates tracked in implementation refresh document |
+
+### Implementation Alignment Note (2026-04-03)
+
+This LLD remains the architecture contract baseline. Runtime alignment changes
+applied after the Phase 12 snapshot (tenant-bound request DB context, API
+route/schema reconciliation, portal chat orchestrator fallback hardening)
+are documented in:
+
+- [Implementation Refresh (2026-04-03)](implementation-refresh-2026-04-03.md)
 
 ---
 

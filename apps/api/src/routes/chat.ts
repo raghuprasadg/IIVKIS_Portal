@@ -8,21 +8,11 @@
  * POST   /api/v1/chat/sessions/:id/feedback        — thumbs up/down feedback
  */
 import { Router, type Request, type Response } from 'express';
-import { Pool } from 'pg';
 import { randomUUID } from 'crypto';
 import { AppError } from '../middleware/error-handler';
+import { getRequestDb } from '../infra/db';
 
 export const chatRouter = Router();
-
-let _pool: Pool | undefined;
-function getPool(): Pool {
-  if (!_pool) {
-    const url = process.env['DATABASE_URL'];
-    if (!url) throw new AppError(503, 'DB_UNAVAILABLE', 'DATABASE_URL is not configured');
-    _pool = new Pool({ connectionString: url, max: 10 });
-  }
-  return _pool;
-}
 
 /** Fire an LLM completion request via the orchestrator endpoint. */
 async function callOrchestrator(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -103,9 +93,9 @@ chatRouter.get('/sessions', async (req: Request, res: Response) => {
   const { limit = '20', offset = '0' } = req.query as Record<string, string>;
 
   try {
-    const pool = getPool();
-    const result = await pool.query(
-      `SELECT * FROM chat_sessions WHERE tenant_id = $1 AND user_id = $2 AND deleted_at IS NULL
+    const db = getRequestDb(req);
+    const result = await db.query(
+      `SELECT * FROM chat_sessions WHERE tenant_id = $1 AND user_id = $2
        ORDER BY updated_at DESC LIMIT $3 OFFSET $4`,
       [req.user!.tenantId, req.user!.userId, Number(limit), Number(offset)],
     );
@@ -119,15 +109,18 @@ chatRouter.get('/sessions', async (req: Request, res: Response) => {
 // ── Create session ─────────────────────────────────────────────────────────────
 chatRouter.post('/sessions', async (req: Request, res: Response) => {
   const { title, contextType, contextId } = req.body as Record<string, unknown>;
+  const incidentId = contextType === 'incident' && typeof contextId === 'string'
+    ? contextId
+    : null;
 
   try {
-    const pool = getPool();
+    const db = getRequestDb(req);
     const id = randomUUID();
-    const result = await pool.query(
+    const result = await db.query(
       `INSERT INTO chat_sessions
-         (id, tenant_id, user_id, title, context_type, context_id, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,now(),now()) RETURNING *`,
-      [id, req.user!.tenantId, req.user!.userId, title ?? 'New Session', contextType ?? null, contextId ?? null],
+         (id, tenant_id, user_id, incident_id, title, status, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,'active',now(),now()) RETURNING *`,
+      [id, req.user!.tenantId, req.user!.userId, incidentId, title ?? 'New Session'],
     );
     res.status(201).json({ data: result.rows[0] });
   } catch (err: unknown) {
@@ -141,17 +134,18 @@ chatRouter.get('/sessions/:id/messages', async (req: Request, res: Response) => 
   const { limit = '100', offset = '0' } = req.query as Record<string, string>;
 
   try {
-    const pool = getPool();
+    const db = getRequestDb(req);
     // Verify session ownership.
-    const sessionResult = await pool.query(
-      `SELECT id FROM chat_sessions WHERE id = $1 AND tenant_id = $2 AND user_id = $3 AND deleted_at IS NULL`,
+    const sessionResult = await db.query(
+      `SELECT id FROM chat_sessions WHERE id = $1 AND tenant_id = $2 AND user_id = $3`,
       [req.params['id'], req.user!.tenantId, req.user!.userId],
     );
     if (!sessionResult.rows[0]) throw new AppError(404, 'NOT_FOUND', 'Session not found');
 
-    const msgResult = await pool.query(
-      `SELECT * FROM chat_messages WHERE session_id = $1 ORDER BY created_at ASC LIMIT $2 OFFSET $3`,
-      [req.params['id'], Number(limit), Number(offset)],
+    const msgResult = await db.query(
+      `SELECT * FROM chat_messages WHERE session_id = $1 AND tenant_id = $2
+       ORDER BY created_at ASC LIMIT $3 OFFSET $4`,
+      [req.params['id'], req.user!.tenantId, Number(limit), Number(offset)],
     );
     res.json({ data: msgResult.rows, count: msgResult.rowCount });
   } catch (err: unknown) {
@@ -166,25 +160,26 @@ chatRouter.post('/sessions/:id/messages', async (req: Request, res: Response) =>
   if (!content) throw new AppError(400, 'VALIDATION_ERROR', 'content is required');
 
   try {
-    const pool = getPool();
-    const sessionResult = await pool.query(
-      `SELECT * FROM chat_sessions WHERE id = $1 AND tenant_id = $2 AND user_id = $3 AND deleted_at IS NULL`,
+    const db = getRequestDb(req);
+    const sessionResult = await db.query(
+      `SELECT * FROM chat_sessions WHERE id = $1 AND tenant_id = $2 AND user_id = $3`,
       [req.params['id'], req.user!.tenantId, req.user!.userId],
     );
     if (!sessionResult.rows[0]) throw new AppError(404, 'NOT_FOUND', 'Session not found');
 
     // Persist user message.
     const userMsgId = randomUUID();
-    await pool.query(
-      `INSERT INTO chat_messages (id, session_id, role, content, created_at)
-       VALUES ($1,$2,'user',$3,now())`,
-      [userMsgId, req.params['id'], content],
+    await db.query(
+      `INSERT INTO chat_messages (id, session_id, tenant_id, role, content, created_at)
+       VALUES ($1,$2,$3,'user',$4,now())`,
+      [userMsgId, req.params['id'], req.user!.tenantId, content],
     );
 
     // Fetch recent context for LLM (last 20 messages).
-    const historyResult = await pool.query(
-      `SELECT role, content FROM chat_messages WHERE session_id = $1 ORDER BY created_at DESC LIMIT 20`,
-      [req.params['id']],
+    const historyResult = await db.query(
+      `SELECT role, content FROM chat_messages
+       WHERE session_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 20`,
+      [req.params['id'], req.user!.tenantId],
     );
     const messages = historyResult.rows.reverse() as { role: string; content: string }[];
 
@@ -208,18 +203,18 @@ chatRouter.post('/sessions/:id/messages', async (req: Request, res: Response) =>
 
     // Persist assistant message.
     const assistantMsgId = randomUUID();
-    const assistantMsg = await pool.query(
-      `INSERT INTO chat_messages (id, session_id, role, content, model_used, tokens_used, created_at)
-       VALUES ($1,$2,'assistant',$3,$4,$5,now()) RETURNING *`,
+    const assistantMsg = await db.query(
+      `INSERT INTO chat_messages (id, session_id, tenant_id, role, content, model_used, tokens_used, created_at)
+       VALUES ($1,$2,$3,'assistant',$4,$5,$6,now()) RETURNING *`,
       [
-        assistantMsgId, req.params['id'], assistantContent,
+        assistantMsgId, req.params['id'], req.user!.tenantId, assistantContent,
         agentResponse['modelUsed'] ?? null,
         agentResponse['tokensUsed'] ?? null,
       ],
     );
 
     // Touch session updated_at.
-    await pool.query(`UPDATE chat_sessions SET updated_at = now() WHERE id = $1`, [req.params['id']]);
+    await db.query(`UPDATE chat_sessions SET updated_at = now() WHERE id = $1 AND tenant_id = $2`, [req.params['id'], req.user!.tenantId]);
 
     res.status(201).json({ data: assistantMsg.rows[0] });
   } catch (err: unknown) {
@@ -239,15 +234,15 @@ chatRouter.post('/sessions/:id/feedback', async (req: Request, res: Response) =>
   if (rating !== 'up' && rating !== 'down') throw new AppError(400, 'VALIDATION_ERROR', 'rating must be up or down');
 
   try {
-    const pool = getPool();
-    const id = randomUUID();
-    await pool.query(
-      `INSERT INTO chat_feedback (id, session_id, message_id, tenant_id, user_id, rating, comment, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,now())
-       ON CONFLICT (message_id, user_id) DO UPDATE SET rating = $6, comment = $7`,
-      [id, req.params['id'], messageId, req.user!.tenantId, req.user!.userId, rating, comment ?? null],
+    const db = getRequestDb(req);
+    const normalizedRating = rating === 'up' ? 'positive' : 'negative';
+    const result = await db.query(
+      `UPDATE chat_messages SET feedback = $1
+       WHERE id = $2 AND session_id = $3 AND tenant_id = $4 RETURNING id`,
+      [normalizedRating, messageId, req.params['id'], req.user!.tenantId],
     );
-    res.status(201).json({ data: { id, rating } });
+    if (!result.rows[0]) throw new AppError(404, 'NOT_FOUND', 'Message not found');
+    res.status(201).json({ data: { messageId, rating: normalizedRating, comment: comment ?? null } });
   } catch (err: unknown) {
     if (err instanceof AppError) throw err;
     throw new AppError(503, 'DB_ERROR', 'Database unavailable');

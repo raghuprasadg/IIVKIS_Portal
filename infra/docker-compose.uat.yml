@@ -27,36 +27,43 @@ services:
     environment:
       POSTGRES_DB: iivkis_uat
       POSTGRES_PASSWORD: iivkis_uat_pass
+    ports: !reset []
     networks:
       - iivkis-uat-net
 
   redis:
     container_name: iivkis-uat-redis
+    ports: !reset []
     networks:
       - iivkis-uat-net
 
   neo4j:
     container_name: iivkis-uat-neo4j
+    ports: !reset []
     networks:
       - iivkis-uat-net
 
   keycloak:
     container_name: iivkis-uat-keycloak
+    ports: !reset []
     networks:
       - iivkis-uat-net
 
   vault:
     container_name: iivkis-uat-vault
+    ports: !reset []
     networks:
       - iivkis-uat-net
 
   prometheus:
     container_name: iivkis-uat-prometheus
+    ports: !reset []
     networks:
       - iivkis-uat-net
 
   grafana:
     container_name: iivkis-uat-grafana
+    ports: !reset []
     networks:
       - iivkis-uat-net
 
@@ -73,7 +80,7 @@ services:
       KEYCLOAK_CLIENT_ID: iivkis-uat-api
       KEYCLOAK_CLIENT_SECRET: uat-client-secret
       DEFAULT_TENANT_ID: tenant-uat
-    ports:
+    ports: !override
       - "4010:4000"
     networks:
       - iivkis-uat-net
@@ -87,7 +94,7 @@ services:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN: ${VAULT_DEV_ROOT_TOKEN:-iivkis-dev-root-token}
       DEFAULT_TENANT_ID: tenant-uat
-    ports:
+    ports: !override
       - "5010:5000"
     networks:
       - iivkis-uat-net
@@ -100,7 +107,7 @@ services:
       NEXT_PUBLIC_ORCHESTRATOR_URL: http://localhost:5010
       UAT_ENABLED: "true"
       UAT_TENANT_ID: tenant-uat
-    ports:
+    ports: !override
       - "3010:3000"
     networks:
       - iivkis-uat-net

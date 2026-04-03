@@ -22,7 +22,7 @@ operations teams interact with the system through this interface to:
 A **Node.js/Express** REST API that:
 - Serves the portal's data requests
 - Forwards complex tasks to the Orchestrator
-- Manages authentication and authorisation (future step)
+- Enforces authentication, tenant context propagation, and rate limiting
 
 ### 3. Engineering Orchestrator (`apps/orchestrator`)
 The central coordination layer that:
@@ -111,11 +111,17 @@ Key architectural decisions:
 | **STEP 1** | Requirements — functional, NFRs, multi-tenancy, LLM, billing, security, resiliency | ✅ Done |
 | **STEP 2** | Threat Modeling — STRIDE analysis, RBAC/mTLS/Vault/WAF/OPA controls, risk register | ✅ Done |
 | **STEP 3** | Architecture Design — HLD, LLD, DFD; multi-tenant isolation, KG+RAG, CE, SaaS+self-host | ✅ Done (Validated) |
-| **STEP 4** | Vendor Knowledge Agent implementation | 🔜 Pending |
-| **STEP 5** | Troubleshooting Agent implementation | 🔜 Pending |
-| **STEP 6** | Integration Agent implementation | 🔜 Pending |
-| **STEP 7** | Analysis Agent + Correlation Engine implementation | 🔜 Pending |
-| **STEP 8** | Orchestrator routing logic + LLM Gateway | 🔜 Pending |
-| **STEP 9** | Portal UI development | 🔜 Pending |
-| **STEP 10** | Billing Engine implementation | 🔜 Pending |
-| **STEP 11** | End-to-end integration + testing | 🔜 Pending |
+| **STEP 4** | Vendor Knowledge Agent implementation | ✅ Implemented (partial runtime stubs remain for some retrieval backends) |
+| **STEP 5** | Troubleshooting Agent implementation | ✅ Implemented |
+| **STEP 6** | Integration Agent implementation | ✅ Implemented |
+| **STEP 7** | Analysis Agent + Correlation Engine implementation | ✅ Implemented |
+| **STEP 8** | Orchestrator routing logic + LLM Gateway | ✅ Implemented |
+| **STEP 9** | Portal UI development | ✅ Implemented |
+| **STEP 10** | Billing Engine implementation | ✅ Implemented |
+| **STEP 11** | End-to-end integration + testing | ✅ Validation suites implemented |
+
+## Implementation Refresh
+
+For post-validation runtime changes and contract-alignment updates, see:
+
+- [Implementation Refresh (2026-04-03)](implementation-refresh-2026-04-03.md)

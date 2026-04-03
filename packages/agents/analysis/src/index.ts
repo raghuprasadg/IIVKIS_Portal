@@ -8,10 +8,12 @@
  *  - Generate analytics reports
  */
 import { createHash } from 'crypto';
-import type { AgentRequest, AgentResponse, Signal, CorrelatedGroupWithEvidence } from '@iivkis/shared';
+import type { AgentRequest, AgentResponse, Signal, CorrelatedGroupWithEvidence, RCAResult } from '@iivkis/shared';
 import { CorrelationEngine } from './correlation/index.js';
 import type { EnrichedSignal, ProcessorContext } from './correlation/index.js';
 import { KGService } from './kg/service.js';
+import { CIResolutionService } from './services/ci-resolution.js';
+import { RCAEngine } from './services/rca.js';
 
 export * from './correlation/index.js';
 export { KGService } from './kg/service.js';
@@ -19,6 +21,8 @@ export { KGService } from './kg/service.js';
 export const AGENT_ID = 'agent-analysis' as const;
 
 const kgService = new KGService();
+const ciResolver = new CIResolutionService();
+const rcaEngine = new RCAEngine();
 
 function fingerprintSignal(signal: Signal): string {
   const raw = `${signal.sourceSystem}|${signal.affectedCiId ?? ''}|${signal.title}`;
@@ -26,13 +30,28 @@ function fingerprintSignal(signal: Signal): string {
 }
 
 async function enrichSignals(signals: Signal[]): Promise<EnrichedSignal[]> {
+  const ciResolvedSignals = signals.map((signal) => {
+    const raw = signal.rawPayload ?? {};
+    const resolvedCi = ciResolver.resolve({
+      ciId: signal.affectedCiId,
+      host: typeof raw['host'] === 'string' ? raw['host'] : undefined,
+      hostname: typeof raw['hostname'] === 'string' ? raw['hostname'] : undefined,
+      ip: typeof raw['ip'] === 'string' ? raw['ip'] : undefined,
+      cloudId: typeof raw['cloud_id'] === 'string' ? raw['cloud_id'] : undefined,
+    });
+    return {
+      ...signal,
+      ...(resolvedCi !== undefined && { affectedCiId: resolvedCi }),
+    };
+  });
+
   // Collect unique CI IDs so we can batch-fetch topology in one call
-  const ciIds = signals
+  const ciIds = ciResolvedSignals
     .map(s => s.affectedCiId)
     .filter((id): id is string => id !== undefined);
   const topoMap = await kgService.batchGetTopologyInfo(ciIds);
 
-  return signals.map((s, idx) => {
+  return ciResolvedSignals.map((s, idx) => {
     const topo = s.affectedCiId ? topoMap.get(s.affectedCiId) : undefined;
     return {
       ...s,
@@ -79,12 +98,25 @@ export async function handle(request: AgentRequest): Promise<AgentResponse> {
           .filter((s): s is EnrichedSignal => s !== undefined),
       }));
 
+      const rca: RCAResult = rcaEngine.derive(groupsWithEvidence);
+
+      for (const signal of enriched) {
+        if (!signal.affectedCiId) continue;
+        void kgService.addEvent(signal.internalId, signal.affectedCiId, {
+          source: signal.sourceSystem,
+          signalType: signal.signalType,
+          severity: signal.severity,
+          occurredAt: signal.occurredAt,
+        });
+      }
+
       return {
         taskId: request.taskId,
         status: 'success',
         tenantId: request.tenantId,
         result: {
           groups: groupsWithEvidence,
+          rca,
           suppressedSignalIds,
           processorLog,
         },

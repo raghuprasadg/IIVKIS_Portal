@@ -1,7 +1,7 @@
 # IIVKIS Phase 12 Validation Report
 
 **Document ID:** IIVKIS-PHASE12-VAL  
-**Version:** 1.0.0  
+**Version:** 1.0.1  
 **Status:** PASS — 62/62 checks  
 **Phase:** STEP 12 — Full System Validation  
 **Date:** 2026-03-30
@@ -28,7 +28,7 @@ Verified that every tenant's data is strictly isolated from others:
 | Check | Result |
 |-------|--------|
 | Tenant middleware extracts and propagates `tenantId` | ✅ |
-| Tenant service scopes DB queries to `id = $1 AND deleted_at IS NULL` | ✅ |
+| Tenant service binds request-scoped DB session context (`app.current_tenant_id`) | ✅ |
 | `TenantConfig` carries per-tenant rate limits + feature flags | ✅ |
 | All correlation routes scope queries to `tenant_id = $1` | ✅ |
 | Incidents, analytics, knowledge routes scope to `tenant_id` | ✅ |
@@ -37,9 +37,14 @@ Verified that every tenant's data is strictly isolated from others:
 | Auth middleware guards all authenticated routes | ✅ |
 
 **Isolation mechanism:**  
-Row-level scoping is enforced at the application layer (every SQL query
-includes `tenant_id = $1`). The database schema uses PostgreSQL RLS policies
-(documented in `docs/lld.md`) as a defence-in-depth layer.
+Row-level scoping is enforced through request-bound tenant DB context plus
+explicit tenant predicates in application queries. PostgreSQL RLS policies
+(documented in `docs/lld.md`) remain the defence-in-depth layer.
+
+Implementation update note:
+
+- Post-phase runtime alignment details are tracked in
+	[Implementation Refresh (2026-04-03)](implementation-refresh-2026-04-03.md).
 
 ---
 

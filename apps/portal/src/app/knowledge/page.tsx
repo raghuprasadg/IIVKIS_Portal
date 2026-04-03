@@ -1,43 +1,14 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
-
-interface Article {
-  id: string;
-  title: string;
-  category: string;
-  tags: string[];
-  views: number;
-  updated: string;
-  author: string;
-}
-
-const ARTICLES = [
-  { id: 'KB-0291', title: 'ServiceNow REST API rate-limiting & retry strategy', category: 'Integration', tags: ['servicenow', 'api', 'retry'], views: 342, updated: '2024-01-14', author: 'SK' },
-  { id: 'KB-0288', title: 'Vault certificate lifecycle — renewal runbook', category: 'Security', tags: ['vault', 'certs', 'pki'], views: 218, updated: '2024-01-13', author: 'JR' },
-  { id: 'KB-0285', title: 'Neo4j query optimisation — index hints & profiling', category: 'Database', tags: ['neo4j', 'performance', 'cypher'], views: 176, updated: '2024-01-12', author: 'TL' },
-  { id: 'KB-0281', title: 'Redis cluster eviction policies — best practices', category: 'Database', tags: ['redis', 'memory', 'eviction'], views: 455, updated: '2024-01-11', author: 'AM' },
-  { id: 'KB-0278', title: 'Keycloak realm configuration for multi-tenant OIDC', category: 'Auth', tags: ['keycloak', 'oidc', 'multi-tenant'], views: 389, updated: '2024-01-10', author: 'BW' },
-  { id: 'KB-0274', title: 'Prometheus alerting rules — SLA breach detection', category: 'Observability', tags: ['prometheus', 'alerting', 'sla'], views: 207, updated: '2024-01-09', author: 'JR' },
-  { id: 'KB-0271', title: 'Jira webhook integration — troubleshooting delivery failures', category: 'Integration', tags: ['jira', 'webhook', 'debug'], views: 134, updated: '2024-01-08', author: 'SK' },
-  { id: 'KB-0268', title: 'PagerDuty escalation policy design — on-call best practices', category: 'Operations', tags: ['pagerduty', 'oncall', 'escalation'], views: 298, updated: '2024-01-07', author: 'TL' },
-  { id: 'KB-0266', title: 'Datadog monitor triage — replica lag, node OOM, and APM evidence', category: 'Observability', tags: ['datadog', 'apm', 'monitor', 'replication'], views: 261, updated: '2024-01-06', author: 'AM' },
-  { id: 'KB-0263', title: 'Grafana alert storm suppression — pending periods and label grouping', category: 'Observability', tags: ['grafana', 'alerts', 'dedup', 'dashboards'], views: 223, updated: '2024-01-05', author: 'JR' },
-  { id: 'KB-0260', title: 'Splunk timeline reconstruction for orchestrator retry failures', category: 'Operations', tags: ['splunk', 'logs', 'orchestrator', 'timeline'], views: 188, updated: '2024-01-04', author: 'TL' },
-  { id: 'KB-0257', title: 'GitHub deployment evidence — mapping failing rollouts to incidents', category: 'Integration', tags: ['github', 'actions', 'deployments', 'rollback'], views: 167, updated: '2024-01-03', author: 'BW' },
-  { id: 'KB-0255', title: 'AWS CloudWatch alarm normalization — EC2, EKS, and queue depth', category: 'Cloud', tags: ['cloudwatch', 'aws', 'alarms', 'eks'], views: 194, updated: '2024-01-02', author: 'SK' },
-  { id: 'KB-0252', title: 'Zabbix problem severity mapping for legacy infrastructure', category: 'Infrastructure', tags: ['zabbix', 'severity', 'legacy', 'json-rpc'], views: 143, updated: '2024-01-01', author: 'TL' },
-  { id: 'KB-0249', title: 'Slack incident threads — operator approvals and war-room hygiene', category: 'Operations', tags: ['slack', 'threads', 'war-room', 'approvals'], views: 279, updated: '2023-12-31', author: 'JR' },
-] as const satisfies readonly Article[];
-
-const CATEGORIES = ['All', 'Integration', 'Security', 'Database', 'Auth', 'Observability', 'Operations', 'Cloud', 'Infrastructure'];
-const FEATURED_VENDORS = ['ServiceNow', 'PagerDuty', 'Jira', 'Datadog', 'Grafana', 'Splunk', 'GitHub', 'CloudWatch', 'Zabbix', 'Slack'];
+import { FEATURED_VENDORS, KNOWLEDGE_ARTICLES, KNOWLEDGE_CATEGORIES } from './articles';
 
 export default function KnowledgePage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
 
-  const filtered = ARTICLES.filter((a) => {
+  const filtered = KNOWLEDGE_ARTICLES.filter((a) => {
     const matchCat = category === 'All' || a.category === category;
     const matchSearch = !search ||
       a.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -50,7 +21,7 @@ export default function KnowledgePage() {
       <div className="page-header">
         <div>
           <div className="page-title">Knowledge Base</div>
-          <div className="page-subtitle">{ARTICLES.length} articles · vendor, cloud, and ops runbooks</div>
+          <div className="page-subtitle">{KNOWLEDGE_ARTICLES.length} articles · vendor, cloud, and ops runbooks</div>
         </div>
         <button className="btn-primary">＋ New Article</button>
       </div>
@@ -76,7 +47,7 @@ export default function KnowledgePage() {
           style={{ maxWidth: '280px' }}
         />
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {CATEGORIES.map((c) => (
+          {KNOWLEDGE_CATEGORIES.map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
@@ -91,7 +62,12 @@ export default function KnowledgePage() {
 
       <div className="card-grid" style={{ marginTop: '1.5rem' }}>
         {filtered.map((a) => (
-          <div key={a.id} className="glass-card" style={{ padding: '1.25rem', cursor: 'pointer' }}>
+          <Link
+            key={a.id}
+            href={`/knowledge/${encodeURIComponent(a.id)}`}
+            className="glass-card"
+            style={{ padding: '1.25rem', cursor: 'pointer', textDecoration: 'none', color: 'inherit', display: 'block' }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{a.id}</span>
               <span className="badge badge-info">{a.category}</span>
@@ -109,7 +85,10 @@ export default function KnowledgePage() {
               <span>Updated {a.updated}</span>
               <div className="user-avatar" style={{ width: '1.4rem', height: '1.4rem', fontSize: '0.6rem' }}>{a.author}</div>
             </div>
-          </div>
+            <div style={{ marginTop: '0.85rem', fontSize: '0.76rem', color: 'var(--color-cyan)', fontWeight: 600 }}>
+              Open article →
+            </div>
+          </Link>
         ))}
       </div>
 

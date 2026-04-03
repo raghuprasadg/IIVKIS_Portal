@@ -138,7 +138,6 @@ services:
       KC_METRICS_ENABLED: "true"
     ports:
       - "${KEYCLOAK_PORT:-8080}:8080"
-      - "9000:9000"
     volumes:
       - ./keycloak:/opt/keycloak/data/import:ro
     networks:

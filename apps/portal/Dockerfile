@@ -36,6 +36,7 @@ COPY packages/shared/tsconfig.json ./packages/shared/
 COPY packages/ui/src               ./packages/ui/src
 COPY packages/ui/tsconfig.json     ./packages/ui/
 COPY apps/portal/src               ./apps/portal/src
+COPY apps/portal/public            ./apps/portal/public
 COPY apps/portal/next.config.js    ./apps/portal/
 COPY apps/portal/next-env.d.ts     ./apps/portal/
 COPY apps/portal/tsconfig.json     ./apps/portal/
@@ -66,6 +67,7 @@ COPY packages/shared/tsconfig.json ./packages/shared/
 COPY packages/ui/src               ./packages/ui/src
 COPY packages/ui/tsconfig.json     ./packages/ui/
 COPY apps/portal/src               ./apps/portal/src
+COPY apps/portal/public            ./apps/portal/public
 COPY apps/portal/next.config.js    ./apps/portal/
 COPY apps/portal/next-env.d.ts     ./apps/portal/
 COPY apps/portal/tsconfig.json     ./apps/portal/

@@ -177,3 +177,16 @@ node scripts/validate-phase9.mjs --live
 | Phase 9 — Full Flow (query→correlation→response) | ✅ 39/39 PASS |
 
 **Phase 9 is complete. No blockers.**
+
+---
+
+## Post-Phase Runtime Update (2026-04-03)
+
+Portal chat route resiliency was improved after the original Phase 9 snapshot:
+
+- Orchestrator endpoint resolution now supports multiple candidate URLs and
+  fallback paths (`/tasks`, `/orchestrate`) for local/container/UAT networking.
+- Chat UI error messaging now surfaces actionable diagnostics instead of opaque
+  `fetch failed` text.
+
+See [Implementation Refresh (2026-04-03)](implementation-refresh-2026-04-03.md).

@@ -57,8 +57,10 @@ npm run typecheck
 
 ## Documentation
 
+- [Documentation Index](docs/README.md) — canonical map of all architecture, validation, and refresh documents
 - [Requirements Specification](docs/requirements.md) — v1.1.0 validated baseline
 - [Requirements Validation Report](docs/requirements-validation.md)
+- [Implementation Refresh (2026-04-03)](docs/implementation-refresh-2026-04-03.md) — post-phase alignment updates (tenant DB context, route-schema fixes, chat resiliency)
 - [Threat Model](docs/threat-model.md) — v1.0.1 STRIDE analysis, 50 threats, RBAC/mTLS/Vault/WAF/OPA controls
 - [Threat Model Validation Report](docs/threat-model-validation.md) — Phase 2 validated, not blocked
 - [High-Level Design (HLD)](docs/hld.md) v1.0.1 — system decomposition, multi-tenant isolation tiers, SaaS + self-host topologies, ADRs (7)
@@ -78,3 +80,12 @@ npm run typecheck
 | **STEP 3** | Architecture Design — HLD, LLD, DFD; multi-tenant isolation, KG+RAG, CE, SaaS+self-host | ✅ Done (Validated) |
 | **STEP 4** | Infrastructure Setup — docker-compose services, health validation | ✅ Done |
 | **STEP 5** | Core Development — API Gateway, Auth/Tenant, 16 CE processors, LLM Gateway, RAG, Connector SDK + 4 connectors, Glassmorphism UI | ✅ Done |
+
+## Implementation Status Note
+
+The Phase 1–12 documents remain the formal design and validation baseline.
+For runtime implementation changes made after those snapshots (for example,
+tenant-bound request DB sessions, API route/schema alignment, and portal chat
+orchestrator fallback behavior), use:
+
+- [Implementation Refresh (2026-04-03)](docs/implementation-refresh-2026-04-03.md)

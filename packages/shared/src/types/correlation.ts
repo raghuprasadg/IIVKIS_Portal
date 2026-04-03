@@ -12,6 +12,17 @@ export type SignalType =
 
 export type SignalSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
 
+/** Canonical normalized event model used across ingestion and correlation. */
+export interface Event {
+  event_id: string;
+  ci_id: string;
+  timestamp: string;
+  event_type: string;
+  source: string;
+  severity: string;
+  attributes: Record<string, unknown>;
+}
+
 /** A single signal event ingested into the Correlation Engine. */
 export interface Signal {
   externalId?: string;

@@ -94,3 +94,14 @@ Phase 6 validation: ✅ PASS
 ```
 
 **Phase 6 validation: COMPLETE ✅**
+
+---
+
+## Post-Phase Runtime Update (2026-04-03)
+
+Later implementation work added route/schema contract alignment and tenant-bound
+request DB session handling at the API layer. These updates do not invalidate
+the Phase 6 core integration results, but they refine runtime correctness and
+isolation behavior in production paths.
+
+See [Implementation Refresh (2026-04-03)](implementation-refresh-2026-04-03.md).
