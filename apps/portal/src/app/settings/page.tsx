@@ -29,7 +29,7 @@ export default function SettingsPage() {
         <div className="page-header">
           <div>
             <div className="page-title">Settings</div>
-            <div className="page-subtitle">Settings changes require Company Admin or Platform Admin access.</div>
+            <div className="page-subtitle">Settings changes require Customer Admin or Platform Admin access.</div>
           </div>
         </div>
         <div className="glass-card" style={{ padding: '1.25rem' }}>

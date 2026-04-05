@@ -320,7 +320,7 @@ export default function IncidentsPage() {
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-            Company Admins stay in governance, billing, and configuration views. Sign in as Company Engineer or Platform Admin to work incident queues.
+            Customer Admins stay in governance, billing, and configuration views. Sign in as Customer Engineer or Platform Admin to work incident queues.
           </div>
         </div>
       </div>
@@ -334,7 +334,7 @@ export default function IncidentsPage() {
         <div>
           <div className="page-title">Incidents</div>
           <div className="page-subtitle">
-            {mode === 'operator' ? 'Platform Admin Console · platform incidents' : 'Company Engineer Console · company incidents'} · {filtered.length} incidents · {scopedIncidents.filter(i => i.status !== 'Resolved').length} open
+            {mode === 'operator' ? 'Platform Admin Console · platform incidents' : 'Customer Engineer Console · customer incidents'} · {filtered.length} incidents · {scopedIncidents.filter(i => i.status !== 'Resolved').length} open
           </div>
         </div>
         {capabilities.canCreateIncident ? (

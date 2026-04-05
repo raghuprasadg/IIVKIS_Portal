@@ -26,13 +26,13 @@ export default function UtilizationPage() {
         <div className="page-header">
           <div>
             <div className="page-title">Utilization</div>
-            <div className="page-subtitle">Utilization views are reserved for company and platform administration.</div>
+            <div className="page-subtitle">Utilization views are reserved for customer and platform administration.</div>
           </div>
         </div>
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-            Sign in as Company Admin or Platform Admin to review plan utilization and capacity thresholds.
+            Sign in as Customer Admin or Platform Admin to review plan utilization and capacity thresholds.
           </div>
         </div>
       </div>

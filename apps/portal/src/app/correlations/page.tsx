@@ -121,7 +121,7 @@ export default function CorrelationsPage() {
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-            Company Admins do not manage incident-correlation groups. Sign in as Company Engineer or Platform Admin for RCA and signal-cluster workflows.
+            Customer Admins do not manage incident-correlation groups. Sign in as Customer Engineer or Platform Admin for RCA and signal-cluster workflows.
           </div>
         </div>
       </div>

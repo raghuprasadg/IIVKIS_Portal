@@ -204,13 +204,13 @@ export default function IntegrationsPage() {
         <div className="page-header">
           <div>
             <div className="page-title">Integrations</div>
-            <div className="page-subtitle">Integration administration is available only to company and platform administrators.</div>
+            <div className="page-subtitle">Integration administration is available only to customer and platform administrators.</div>
           </div>
         </div>
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-            Sign in as Company Admin or Platform Admin to review or manage company integrations.
+            Sign in as Customer Admin or Platform Admin to review or manage customer integrations.
           </div>
         </div>
       </div>

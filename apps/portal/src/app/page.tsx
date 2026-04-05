@@ -62,7 +62,7 @@ const COMPANY_ADMIN_JOURNEY: JourneyStep[] = [
     step: '1',
     title: 'Open Company Workspace',
     summary: 'Start from one tenant-scoped command center for subscription, tooling, and operations governance.',
-    detail: 'Company admins are responsible for enablement, spend, and access inside their own workspace.',
+    detail: 'Customer admins are responsible for enablement, spend, and access inside their own workspace.',
     accent: 'cyan',
   },
   {
@@ -90,7 +90,7 @@ const COMPANY_ADMIN_JOURNEY: JourneyStep[] = [
     step: '5',
     title: 'Escalate Platform Needs',
     summary: 'Raise platform requests for capacity changes, onboarding, billing adjustments, or SLA reviews.',
-    detail: 'Company admins interact with the platform team through governed request paths.',
+    detail: 'Customer admins interact with the platform team through governed request paths.',
     accent: 'amber',
   },
   {
@@ -107,7 +107,7 @@ const COMPANY_ENGINEER_JOURNEY: JourneyStep[] = [
     step: '1',
     title: 'Triage the Signal',
     summary: 'Open incidents, inspect evidence, and narrow the problem to the affected services and timelines.',
-    detail: 'Company engineers stay inside their tenant context with direct access to technical evidence.',
+    detail: 'Customer engineers stay inside their tenant context with direct access to technical evidence.',
     accent: 'cyan',
   },
   {
@@ -255,7 +255,7 @@ type WorkspaceKind = 'platform-admin' | 'company-admin' | 'company-engineer';
 
 function getWorkspaceKind(user: DemoUser): WorkspaceKind {
   if (user.role === 'Platform Admin') return 'platform-admin';
-  if (user.role === 'Company Admin') return 'company-admin';
+  if (user.role === 'Customer Admin') return 'company-admin';
   return 'company-engineer';
 }
 
@@ -440,7 +440,7 @@ function ExperienceBoard({ workspace, sessionUser }: { workspace: WorkspaceKind;
       <section className="glass-card experience-board">
         <div className="experience-board-header">
           <div>
-            <div className="experience-kicker">Company Admin Workspace</div>
+            <div className="experience-kicker">Customer Admin Workspace</div>
             <div className="experience-title">Govern the {sessionUser.org} workspace without entering engineer-only flows</div>
             <div className="experience-subtitle">This view is for subscriptions, integrations, spend, policy, and platform requests.</div>
           </div>
@@ -493,7 +493,7 @@ function ExperienceBoard({ workspace, sessionUser }: { workspace: WorkspaceKind;
     <section className="glass-card experience-board">
       <div className="experience-board-header">
         <div>
-          <div className="experience-kicker">Company Engineer Workspace</div>
+            <div className="experience-kicker">Customer Engineer Workspace</div>
           <div className="experience-title">Secure delivery view for {sessionUser.org}</div>
           <div className="experience-subtitle">Incident response, AI guidance, correlation, and knowledge work stay in one engineer-focused console.</div>
         </div>
@@ -841,7 +841,7 @@ export default function DashboardPage() {
       <div style={{ padding: '2rem' }}>
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <div className="page-title" style={{ marginBottom: '0.5rem' }}>Session Logged Out</div>
-          <div className="page-subtitle">Use the sidebar to login as Platform Admin, Company Admin, or Company Engineer.</div>
+          <div className="page-subtitle">Use the sidebar to login as Platform Admin, Customer Admin, or Customer Engineer.</div>
         </div>
       </div>
     );

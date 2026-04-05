@@ -1,6 +1,6 @@
 import type { ConsoleMode } from './console-mode';
 
-export type PortalRole = 'Platform Admin' | 'Company Admin' | 'Company Engineer';
+export type PortalRole = 'Platform Admin' | 'Customer Admin' | 'Customer Engineer';
 
 export interface DemoUser {
   username: string;
@@ -60,7 +60,7 @@ export const DEMO_USERS: DemoUser[] = [
   {
     username: 'cadmin@acme.corp',
     password: 'CAdmin@Acme2026',
-    role: 'Company Admin',
+    role: 'Customer Admin',
     mode: 'end-user',
     displayName: 'Acme Admin Desk',
     org: 'Acme Corp',
@@ -70,7 +70,7 @@ export const DEMO_USERS: DemoUser[] = [
   {
     username: 'user@acme.corp',
     password: 'User@Acme2026',
-    role: 'Company Engineer',
+    role: 'Customer Engineer',
     mode: 'end-user',
     displayName: 'John Doe',
     org: 'Acme Corp',
@@ -128,7 +128,7 @@ export function getRoleCapabilities(user: DemoUser | null): RoleCapabilities {
         canViewBilling: true,
         canRaisePlatformTickets: true,
       };
-    case 'Company Admin':
+    case 'Customer Admin':
       return {
         canCreateIncident: false,
         canManageIntegrations: true,
@@ -145,7 +145,7 @@ export function getRoleCapabilities(user: DemoUser | null): RoleCapabilities {
         canViewBilling: true,
         canRaisePlatformTickets: true,
       };
-    case 'Company Engineer':
+    case 'Customer Engineer':
       return {
         canCreateIncident: true,
         canManageIntegrations: false,
@@ -186,9 +186,9 @@ export function getRoleAccentColor(role: PortalRole | null | undefined): string 
   switch (role) {
     case 'Platform Admin':
       return 'var(--color-cyan)';
-    case 'Company Admin':
+    case 'Customer Admin':
       return '#b97aff';
-    case 'Company Engineer':
+    case 'Customer Engineer':
       return 'var(--color-amber)';
     default:
       return 'var(--color-text-muted)';

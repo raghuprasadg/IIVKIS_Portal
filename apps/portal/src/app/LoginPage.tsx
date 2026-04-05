@@ -29,7 +29,7 @@ const CAPABILITIES = [
   {
     icon: '🏢',
     title: 'Role-Specific Workspaces',
-    desc: 'Platform admins, company admins, and company engineers each see distinct features, content, and controls with strict tenant isolation.',
+    desc: 'Platform admins, customer admins, and customer engineers each see distinct features, content, and controls with strict tenant isolation.',
   },
 ];
 
