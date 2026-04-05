@@ -1,22 +1,51 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 import AppSidebar from './AppSidebar';
 import LoginPage from './LoginPage';
-import { readSessionUser } from './lib/demo-users';
+import { saveConsoleMode } from './lib/console-mode';
+import {
+  canAccessPortalSection,
+  clearSessionUser,
+  getPortalSectionForPath,
+  saveSessionUser,
+  readSessionUser,
+  type DemoUser,
+} from './lib/demo-users';
 
-export default function RootClient({ children }: { children: React.ReactNode }) {
-  const [authed, setAuthed] = useState<boolean | null>(null); // null = hydrating
+export default function RootClient({
+  children,
+  initialSession,
+}: {
+  children: React.ReactNode;
+  initialSession: DemoUser | null;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
-    setAuthed(readSessionUser() !== null);
-  }, []);
+    if (initialSession) {
+      saveSessionUser(initialSession);
+      saveConsoleMode(initialSession.mode);
+    } else {
+      clearSessionUser();
+      saveConsoleMode('logged-out');
+    }
+  }, [initialSession]);
 
-  // Avoid flash: render nothing until hydration is done
-  if (authed === null) return null;
+  useEffect(() => {
+    if (!initialSession) return;
 
-  if (!authed) {
+    const user = readSessionUser() ?? initialSession;
+    const section = getPortalSectionForPath(pathname);
+    if (section && !canAccessPortalSection(user, section)) {
+      router.replace('/');
+    }
+  }, [initialSession, pathname, router]);
+
+  if (!initialSession) {
     return <LoginPage onSuccess={() => { window.location.reload(); }} />;
   }
 

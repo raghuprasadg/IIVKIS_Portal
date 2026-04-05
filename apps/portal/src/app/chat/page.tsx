@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { buildSessionHeaders, getRoleCapabilities, readSessionUser } from '../lib/demo-users';
+import { getRoleCapabilities, readSessionUser } from '../lib/demo-users';
 
 interface Message {
   id: string;
@@ -222,7 +222,7 @@ export default function ChatPage() {
       headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
     }
 
-    return { ...headers, ...buildSessionHeaders(sessionUser) };
+    return headers;
   };
 
   const scrollToBottom = () => {
@@ -253,25 +253,6 @@ export default function ChatPage() {
     if (normalized) setDisplayName(normalized);
   }, []);
 
-  if (!capabilities.canUseChat) {
-    return (
-      <div>
-        <div className="page-header">
-          <div>
-            <div className="page-title">AI Chat</div>
-            <div className="page-subtitle">AI troubleshooting is reserved for engineering and platform roles.</div>
-          </div>
-        </div>
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-            Customer Admins do not use the AI troubleshooting console. Sign in as Customer Engineer or Platform Admin to open guided incident chat.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const buildWelcomeMessage = (name: string): string => {
     return `Hi ${name}, I am your IIVKIS co-working assistant. I can work with you on incidents, correlations, and runbooks. Share an incident ID or goal, and we will triage it together.`;
   };
@@ -293,6 +274,25 @@ export default function ChatPage() {
         : s)
     );
   }, [activeId, activeSession, displayName]);
+
+  if (!capabilities.canUseChat) {
+    return (
+      <div>
+        <div className="page-header">
+          <div>
+            <div className="page-title">AI Chat</div>
+            <div className="page-subtitle">AI troubleshooting is reserved for engineering and platform roles.</div>
+          </div>
+        </div>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+            Customer Admins do not use the AI troubleshooting console. Sign in as Customer Engineer or Platform Admin to open guided incident chat.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const scoreByKeywords = (text: string, keywords: string[]): number => {
     const normalized = text.toLowerCase();

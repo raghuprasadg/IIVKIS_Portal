@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 
 import { saveConsoleMode } from './lib/console-mode';
-import { findUser, saveSessionUser, DEMO_USERS, getRoleAccentColor } from './lib/demo-users';
+import { saveSessionUser, DEMO_USERS, getRoleAccentColor, type DemoUser } from './lib/demo-users';
 
 interface Props {
   onSuccess: () => void;
@@ -40,26 +40,41 @@ export default function LoginPage({ onSuccess }: Props) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    setTimeout(() => {
-      const user = findUser(username.trim(), password);
-      if (user) {
-        saveSessionUser(user);
-        saveConsoleMode(user.mode);
-        onSuccess();
-      } else {
-        setError('Invalid username or password. Check the demo credentials below.');
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        data?: { user?: DemoUser };
+        error?: { message?: string };
+      };
+
+      if (!response.ok || !payload.data?.user) {
+        setError(payload.error?.message ?? 'Invalid username or password. Check the demo credentials below.');
+        return;
       }
+
+      saveSessionUser(payload.data.user);
+      saveConsoleMode(payload.data.user.mode);
+      onSuccess();
+    } catch {
+      setError('Sign-in service is unavailable. Please try again.');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   const quickLogin = (u: typeof DEMO_USERS[number]) => {
     setUsername(u.username);
-    setPassword(u.password);
+    setPassword(u.password ?? '');
   };
 
   return (

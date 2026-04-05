@@ -249,7 +249,7 @@ const EXPERIENCE_FINDINGS = [
   { title: 'Leaked GitHub token in config', severity: 'Critical', tone: 'pill-coral' },
 ] as const;
 
-const EXPERIENCE_INTEGRATIONS = ['GitHub', 'GitLab', 'Bitbucket', 'Jira', 'AWS', 'Azure', 'GCP'] as const;
+const ENGINEER_ASSETS = ['Runbooks', 'Correlated signals', 'Timeline notes', 'Root-cause hypotheses', 'Recovery checks', 'Postmortem drafts'] as const;
 
 type WorkspaceKind = 'platform-admin' | 'company-admin' | 'company-engineer';
 
@@ -535,7 +535,7 @@ router.post('/login', (req, res) => {
           </div>
           <div className="experience-patch-preview">
             <div className="experience-patch-label">Suggested patch</div>
-            <div className="experience-patch-body">db.query('SELECT * FROM users WHERE user = $1 AND pass = $2', [user, pass]);</div>
+            <div className="experience-patch-body">db.query(&apos;SELECT * FROM users WHERE user = $1 AND pass = $2&apos;, [user, pass]);</div>
           </div>
           <button className="btn-primary" style={{ width: '100%' }}>Apply Fix</button>
         </div>
@@ -569,10 +569,10 @@ router.post('/login', (req, res) => {
         </div>
 
         <div className="experience-integrations glass-card">
-          <div className="experience-panel-title">Connected Delivery Stack</div>
+          <div className="experience-panel-title">Investigation Assets</div>
           <div className="experience-integration-list">
-            {EXPERIENCE_INTEGRATIONS.map((tool) => (
-              <span key={tool} className="integration-chip">{tool}</span>
+            {ENGINEER_ASSETS.map((asset) => (
+              <span key={asset} className="integration-chip">{asset}</span>
             ))}
           </div>
         </div>

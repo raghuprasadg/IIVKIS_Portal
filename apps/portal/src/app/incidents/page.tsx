@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { isConsoleAuthenticated, readConsoleMode, type ConsoleMode } from '../lib/console-mode';
-import { buildSessionHeaders, getRoleCapabilities, readSessionUser, type DemoUser } from '../lib/demo-users';
+import { getRoleCapabilities, readSessionUser, type DemoUser } from '../lib/demo-users';
 
 interface Incident {
   id: string;
@@ -269,10 +269,7 @@ export default function IncidentsPage() {
 
     async function loadDeepDive(): Promise<void> {
       try {
-        const response = await fetch(`/api/incidents/${activeIncident.id}`, {
-          headers: buildSessionHeaders(sessionUser),
-          signal: controller.signal,
-        });
+        const response = await fetch(`/api/incidents/${activeIncident.id}`, { signal: controller.signal });
 
         if (!response.ok) {
           const payload = (await response.json().catch(() => ({}))) as { error?: { message?: string } };

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -60,7 +61,8 @@ export default function AppSidebar() {
     window.location.reload();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
     clearSessionUser();
     saveConsoleMode('logged-out');
     setSessionUser(null);
@@ -78,9 +80,11 @@ export default function AppSidebar() {
   return (
     <nav className="sidebar">
       <div className="sidebar-logo">
-        <img
+        <Image
           src="/iivkis-logo-nav.svg"
           alt="IIVKIS – Intelligent IT Vendor Knowledge Integration System"
+          width={190}
+          height={50}
           style={{ width: '100%', maxWidth: '190px', height: 'auto', display: 'block' }}
         />
       </div>

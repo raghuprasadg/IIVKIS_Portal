@@ -267,6 +267,15 @@ services:
       NEO4J_PASSWORD: ${NEO4J_PASSWORD:-iivkis_dev_pass}
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN: ${VAULT_DEV_ROOT_TOKEN:-iivkis-dev-root-token}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_HTTP_REFERER: ${LLM_HTTP_REFERER:-http://localhost:3000}
+      LLM_APP_TITLE: ${LLM_APP_TITLE:-IIVKIS Portal}
+      LLM_MODEL_FAST: ${LLM_MODEL_FAST:-gpt-4o-mini}
+      LLM_MODEL_CAPABLE: ${LLM_MODEL_CAPABLE:-gpt-4o}
+      LLM_MODEL_AUTO: ${LLM_MODEL_AUTO:-gpt-4o-mini}
+      LLM_EMBEDDING_MODEL: ${LLM_EMBEDDING_MODEL:-text-embedding-3-small}
+      LLM_BUDGET_TOKENS_PER_DAY: ${LLM_BUDGET_TOKENS_PER_DAY:-1000000}
     ports:
       - "${ORCHESTRATOR_PORT:-5000}:5000"
     networks:
@@ -297,6 +306,7 @@ services:
       NODE_ENV: development
       NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-4000}
       NEXT_PUBLIC_ORCHESTRATOR_URL: http://localhost:${ORCHESTRATOR_PORT:-5000}
+      PORTAL_SESSION_SECRET: ${PORTAL_SESSION_SECRET:-iivkis-dev-session-secret-change-me}
       NEXT_TELEMETRY_DISABLED: "1"
     ports:
       - "${PORTAL_PORT:-3000}:3000"

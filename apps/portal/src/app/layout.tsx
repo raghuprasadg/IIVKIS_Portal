@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 
 import './globals.css';
 
 import RootClient from './RootClient';
+import { PORTAL_SESSION_COOKIE, verifyPortalSessionToken } from './lib/auth-session';
 
 export const metadata: Metadata = {
   title: 'IIVKIS – Operations Portal',
@@ -20,11 +22,14 @@ export const viewport: Viewport = {
   themeColor: '#00d4ff',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const session = await verifyPortalSessionToken(cookieStore.get(PORTAL_SESSION_COOKIE)?.value);
+
   return (
     <html lang="en" className="dark">
       <body>
-        <RootClient>{children}</RootClient>
+        <RootClient initialSession={session}>{children}</RootClient>
       </body>
     </html>
   );

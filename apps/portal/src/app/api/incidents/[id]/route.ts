@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+import { getPortalSessionFromCookieHeader, verifyPortalSessionToken } from '../../../lib/auth-session';
+import { canAccessPortalSection } from '../../../lib/demo-users';
+
 function normalizeBaseUrl(url: string): string {
   return url.replace(/\/+$/, '');
 }
@@ -37,8 +40,18 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const tenantId = request.headers.get('x-dev-tenant-id') ?? process.env['PORTAL_TENANT_ID'] ?? 'tenant-uat';
-  const userId = request.headers.get('x-dev-user-id') ?? process.env['PORTAL_USER_ID'] ?? 'portal-user';
+  const session = await verifyPortalSessionToken(
+    getPortalSessionFromCookieHeader(request.headers.get('cookie')),
+  );
+
+  if (!session) {
+    return NextResponse.json({ error: { message: 'Authentication required.' } }, { status: 401 });
+  }
+
+  if (!canAccessPortalSection(session, 'incidents')) {
+    return NextResponse.json({ error: { message: 'Forbidden.' } }, { status: 403 });
+  }
+
   const candidates = buildApiCandidates();
   const errors: string[] = [];
 
@@ -46,8 +59,8 @@ export async function GET(
     const headers = {
       'Content-Type': 'application/json',
       'X-Trace-Id': crypto.randomUUID(),
-      'X-Dev-Tenant-Id': tenantId,
-      'X-Dev-User-Id': userId,
+      'X-Dev-Tenant-Id': session.tenantId,
+      'X-Dev-User-Id': session.userId,
     };
 
     try {

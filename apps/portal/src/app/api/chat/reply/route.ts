@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+import { getPortalSessionFromCookieHeader, verifyPortalSessionToken } from '../../../lib/auth-session';
+import { canAccessPortalSection } from '../../../lib/demo-users';
+
 interface ChatRequestBody {
   content?: string;
   messages?: Array<{ role?: string; content?: string }>;
@@ -120,8 +123,17 @@ async function callOrchestrator(
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as ChatRequestBody;
   const content = body.content?.trim();
-  const tenantId = request.headers.get('x-dev-tenant-id') ?? process.env['PORTAL_TENANT_ID'] ?? 'tenant-uat';
-  const userId = request.headers.get('x-dev-user-id') ?? process.env['PORTAL_USER_ID'] ?? 'portal-user';
+  const session = await verifyPortalSessionToken(
+    getPortalSessionFromCookieHeader(request.headers.get('cookie')),
+  );
+
+  if (!session) {
+    return NextResponse.json({ error: { message: 'Authentication required.' } }, { status: 401 });
+  }
+
+  if (!canAccessPortalSection(session, 'chat')) {
+    return NextResponse.json({ error: { message: 'Forbidden.' } }, { status: 403 });
+  }
 
   if (!content) {
     return NextResponse.json(
@@ -133,7 +145,7 @@ export async function POST(request: Request) {
   const messages = normalizeMessages(body.messages, content);
 
   try {
-    const orchestratorReply = await callOrchestrator(messages, tenantId, userId);
+    const orchestratorReply = await callOrchestrator(messages, session.tenantId, session.userId);
     return NextResponse.json({ data: { role: 'assistant', content: orchestratorReply, status: 'success' } });
   } catch (error) {
     const raw = error instanceof Error ? error.message : 'AI backend is unavailable.';

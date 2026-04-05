@@ -4,7 +4,7 @@ export type PortalRole = 'Platform Admin' | 'Customer Admin' | 'Customer Enginee
 
 export interface DemoUser {
   username: string;
-  password: string;
+  password?: string;
   role: PortalRole;
   mode: ConsoleMode;
   displayName: string;
@@ -91,7 +91,10 @@ export function findUser(username: string, password: string): DemoUser | null {
 
 export function saveSessionUser(user: DemoUser): void {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+
+  const sessionUser = { ...user };
+  delete sessionUser.password;
+  window.localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
 }
 
 export function readSessionUser(): DemoUser | null {
@@ -228,6 +231,23 @@ export function canAccessPortalSection(user: DemoUser | null, section: PortalSec
     default:
       return false;
   }
+}
+
+export function getPortalSectionForPath(pathname: string): PortalSection | null {
+  if (pathname === '/') return 'dashboard';
+  if (pathname.startsWith('/chat')) return 'chat';
+  if (pathname.startsWith('/incidents')) return 'incidents';
+  if (pathname.startsWith('/knowledge')) return 'knowledge';
+  if (pathname.startsWith('/correlations')) return 'correlations';
+  if (pathname.startsWith('/integrations')) return 'integrations';
+  if (pathname.startsWith('/subscriptions')) return 'subscriptions';
+  if (pathname.startsWith('/utilization')) return 'utilization';
+  if (pathname.startsWith('/telemetry')) return 'telemetry';
+  if (pathname.startsWith('/billing')) return 'billing';
+  if (pathname.startsWith('/platform-support')) return 'platform-support';
+  if (pathname.startsWith('/analytics')) return 'analytics';
+  if (pathname.startsWith('/settings')) return 'settings';
+  return null;
 }
 
 export function buildSessionHeaders(user: DemoUser | null): Record<string, string> {
