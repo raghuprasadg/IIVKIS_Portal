@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+import { getRoleCapabilities, readSessionUser, type DemoUser } from '../lib/demo-users';
 
 type IntegrationStatus = 'connected' | 'degraded' | 'disconnected';
 
@@ -186,9 +188,34 @@ const STATUS_STYLES: Record<IntegrationStatus, { color: string; label: string }>
 };
 
 export default function IntegrationsPage() {
+  const [sessionUser, setSessionUser] = useState<DemoUser | null>(null);
   const [filter, setFilter] = useState('All');
+  useEffect(() => {
+    setSessionUser(readSessionUser());
+  }, []);
+
+  const capabilities = getRoleCapabilities(sessionUser);
   const types = ['All', ...Array.from(new Set(INTEGRATIONS.map(i => i.type)))];
   const filtered = filter === 'All' ? INTEGRATIONS : INTEGRATIONS.filter(i => i.type === filter);
+
+  if (!capabilities.canManageIntegrations) {
+    return (
+      <div>
+        <div className="page-header">
+          <div>
+            <div className="page-title">Integrations</div>
+            <div className="page-subtitle">Integration administration is available only to company and platform administrators.</div>
+          </div>
+        </div>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+            Sign in as Company Admin or Platform Admin to review or manage company integrations.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

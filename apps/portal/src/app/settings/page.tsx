@@ -1,17 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+import { getRoleCapabilities, readSessionUser, type DemoUser } from '../lib/demo-users';
 
 const SECTIONS = ['General', 'Notifications', 'Integrations', 'Security', 'Appearance'];
 
 export default function SettingsPage() {
+  const [sessionUser, setSessionUser] = useState<DemoUser | null>(null);
   const [active, setActive] = useState('General');
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    setSessionUser(readSessionUser());
+  }, []);
+
+  const capabilities = getRoleCapabilities(sessionUser);
+
   const save = () => {
+    if (!capabilities.canManageSettings) return;
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
+
+  if (!capabilities.canManageSettings) {
+    return (
+      <div>
+        <div className="page-header">
+          <div>
+            <div className="page-title">Settings</div>
+            <div className="page-subtitle">Settings changes require Company Admin or Platform Admin access.</div>
+          </div>
+        </div>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Read-only session</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+            Your current role can work in incident, chat, knowledge, and correlation views, but cannot modify company or platform settings.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

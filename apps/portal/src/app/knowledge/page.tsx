@@ -1,12 +1,41 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+import { getRoleCapabilities, readSessionUser, type DemoUser } from '../lib/demo-users';
+
 import { FEATURED_VENDORS, KNOWLEDGE_ARTICLES, KNOWLEDGE_CATEGORIES } from './articles';
 
 export default function KnowledgePage() {
+  const [sessionUser, setSessionUser] = useState<DemoUser | null>(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
+
+  useEffect(() => {
+    setSessionUser(readSessionUser());
+  }, []);
+
+  const capabilities = getRoleCapabilities(sessionUser);
+
+  if (!capabilities.canUseKnowledge) {
+    return (
+      <div>
+        <div className="page-header">
+          <div>
+            <div className="page-title">Knowledge Base</div>
+            <div className="page-subtitle">Technical knowledge content is reserved for engineering and platform roles.</div>
+          </div>
+        </div>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+            Company Admins use integrations, subscriptions, analytics, and settings instead of the engineer knowledge workspace.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const filtered = KNOWLEDGE_ARTICLES.filter((a) => {
     const matchCat = category === 'All' || a.category === category;
@@ -23,7 +52,11 @@ export default function KnowledgePage() {
           <div className="page-title">Knowledge Base</div>
           <div className="page-subtitle">{KNOWLEDGE_ARTICLES.length} articles · vendor, cloud, and ops runbooks</div>
         </div>
-        <button className="btn-primary">＋ New Article</button>
+        {capabilities.canCreateKnowledge ? (
+          <button className="btn-primary">＋ New Article</button>
+        ) : (
+          <span className="badge badge-info">Read-only knowledge access</span>
+        )}
       </div>
 
       <div className="glass-card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem' }}>

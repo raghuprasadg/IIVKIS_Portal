@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
+import { getRoleCapabilities, readSessionUser, type DemoUser } from '../lib/demo-users';
+
 import {
   FALLBACK_CORRELATION_ENGINES,
   type CorrelationEngineDefinition,
@@ -65,13 +68,19 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function CorrelationsPage() {
+  const [sessionUser, setSessionUser] = useState<DemoUser | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [engines, setEngines] = useState<CorrelationEngineDefinition[]>(
     FALLBACK_CORRELATION_ENGINES,
   );
+  const capabilities = getRoleCapabilities(sessionUser);
   const detail = GROUPS.find(g => g.id === selected);
   const coreEngines = engines.filter(engine => !engine.advanced);
   const advancedEngines = engines.filter(engine => engine.advanced);
+
+  useEffect(() => {
+    setSessionUser(readSessionUser());
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -99,6 +108,25 @@ export default function CorrelationsPage() {
     void loadCorrelationEngines();
     return () => controller.abort();
   }, []);
+
+  if (!capabilities.canUseCorrelations) {
+    return (
+      <div>
+        <div className="page-header">
+          <div>
+            <div className="page-title">Correlation Groups</div>
+            <div className="page-subtitle">Correlation workflows are reserved for engineering and platform roles.</div>
+          </div>
+        </div>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+            Company Admins do not manage incident-correlation groups. Sign in as Company Engineer or Platform Admin for RCA and signal-cluster workflows.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

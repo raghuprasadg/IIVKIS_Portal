@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+
 import { getKnowledgeArticle } from '../articles';
 
 export default async function KnowledgeArticlePage({

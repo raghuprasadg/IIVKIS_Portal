@@ -48,9 +48,9 @@ export default function LoginForm({ onSuccess }: Props) {
         lineHeight: 1.6,
       }}>
         <div style={{ fontWeight: 600, color: 'var(--color-cyan)', marginBottom: '3px' }}>Demo credentials</div>
-        <div><span style={{ color: 'var(--color-text-secondary)' }}>Operator&nbsp;Admin&nbsp;</span>admin@iivkis.io</div>
-        <div><span style={{ color: 'var(--color-text-secondary)' }}>Customer&nbsp;Admin&nbsp;</span>cadmin@acme.corp</div>
-        <div><span style={{ color: 'var(--color-text-secondary)' }}>Customer&nbsp;User&nbsp;&nbsp;</span>user@acme.corp</div>
+        <div><span style={{ color: 'var(--color-text-secondary)' }}>Platform&nbsp;Admin&nbsp;</span>admin@iivkis.io</div>
+        <div><span style={{ color: 'var(--color-text-secondary)' }}>Company&nbsp;Admin&nbsp;</span>cadmin@acme.corp</div>
+        <div><span style={{ color: 'var(--color-text-secondary)' }}>Company&nbsp;Engineer&nbsp;</span>user@acme.corp</div>
       </div>
 
       <input

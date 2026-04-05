@@ -1,22 +1,42 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { readConsoleMode, saveConsoleMode, type ConsoleMode } from './lib/console-mode';
-import { readSessionUser, clearSessionUser, type DemoUser } from './lib/demo-users';
-import LoginForm from './LoginForm';
 
-const NAV_ITEMS = [
-  { href: '/', icon: '📊', label: 'Dashboard' },
-  { href: '/chat', icon: '💬', label: 'Chat' },
-  { href: '/incidents', icon: '🚨', label: 'Incidents' },
-  { href: '/knowledge', icon: '📚', label: 'Knowledge' },
-  { href: '/correlations', icon: '🔗', label: 'Correlations' },
-  { href: '/integrations', icon: '🔌', label: 'Integrations' },
-  { href: '/analytics', icon: '📈', label: 'Analytics' },
-  { href: '/settings', icon: '⚙️', label: 'Settings' },
-] as const;
+import LoginForm from './LoginForm';
+import { readConsoleMode, saveConsoleMode, type ConsoleMode } from './lib/console-mode';
+import {
+  readSessionUser,
+  clearSessionUser,
+  canAccessPortalSection,
+  getRoleAccentColor,
+  type DemoUser,
+  type PortalSection,
+} from './lib/demo-users';
+
+interface NavItem {
+  href: string;
+  icon: string;
+  label: string;
+  section: PortalSection;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/', icon: '📊', label: 'Dashboard', section: 'dashboard' },
+  { href: '/chat', icon: '💬', label: 'AI Chat', section: 'chat' },
+  { href: '/incidents', icon: '🚨', label: 'Incidents', section: 'incidents' },
+  { href: '/knowledge', icon: '📚', label: 'Knowledge', section: 'knowledge' },
+  { href: '/correlations', icon: '🕸️', label: 'Correlations', section: 'correlations' },
+  { href: '/integrations', icon: '🔌', label: 'Integrations', section: 'integrations' },
+  { href: '/subscriptions', icon: '📦', label: 'Subscriptions', section: 'subscriptions' },
+  { href: '/utilization', icon: '📈', label: 'Utilization', section: 'utilization' },
+  { href: '/telemetry', icon: '📡', label: 'Telemetry', section: 'telemetry' },
+  { href: '/billing', icon: '💳', label: 'Billing', section: 'billing' },
+  { href: '/platform-support', icon: '🎫', label: 'Platform Tickets', section: 'platform-support' },
+  { href: '/analytics', icon: '📉', label: 'Analytics', section: 'analytics' },
+  { href: '/settings', icon: '⚙️', label: 'Settings', section: 'settings' },
+];
 
 export default function AppSidebar() {
   const pathname = usePathname();
@@ -48,21 +68,16 @@ export default function AppSidebar() {
     window.location.reload();
   };
 
-  const roleColor =
-    sessionUser?.role === 'Operator Admin'
-      ? 'var(--color-cyan)'
-      : sessionUser?.role === 'Customer Admin'
-        ? '#b97aff'
-        : 'var(--color-amber)';
+  const roleColor = getRoleAccentColor(sessionUser?.role);
 
   const avatarInitials = sessionUser
     ? sessionUser.displayName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
     : '--';
+  const visibleNavItems = NAV_ITEMS.filter((item) => canAccessPortalSection(sessionUser, item.section));
 
   return (
     <nav className="sidebar">
       <div className="sidebar-logo">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/iivkis-logo-nav.svg"
           alt="IIVKIS – Intelligent IT Vendor Knowledge Integration System"
@@ -72,7 +87,7 @@ export default function AppSidebar() {
 
       <div className="sidebar-nav">
         <div className="nav-section-label">Navigation</div>
-        {NAV_ITEMS.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive =
             item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
           return (

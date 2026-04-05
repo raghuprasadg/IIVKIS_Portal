@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 
 import { saveConsoleMode } from './lib/console-mode';
-import { findUser, saveSessionUser, DEMO_USERS } from './lib/demo-users';
+import { findUser, saveSessionUser, DEMO_USERS, getRoleAccentColor } from './lib/demo-users';
 
 interface Props {
   onSuccess: () => void;
@@ -28,8 +28,8 @@ const CAPABILITIES = [
   },
   {
     icon: '🏢',
-    title: 'Multi-Tenant Architecture',
-    desc: 'Operator and customer consoles with strict data isolation, role-based access, and per-tenant SLA tracking.',
+    title: 'Role-Specific Workspaces',
+    desc: 'Platform admins, company admins, and company engineers each see distinct features, content, and controls with strict tenant isolation.',
   },
 ];
 
@@ -66,6 +66,8 @@ export default function LoginPage({ onSuccess }: Props) {
     <div style={{
       minHeight: '100vh',
       display: 'flex',
+      justifyContent: 'center',
+      padding: '2rem clamp(1.25rem, 2.6vw, 3rem)',
       background: 'linear-gradient(135deg, #0a0a1a 0%, #0d1b2a 50%, #0f2337 100%)',
       position: 'relative',
       overflow: 'hidden',
@@ -106,13 +108,22 @@ export default function LoginPage({ onSuccess }: Props) {
         }} />
       </div>
 
+      <div className="login-shell" style={{
+        width: '100%',
+        maxWidth: '1560px',
+        display: 'flex',
+        alignItems: 'stretch',
+        position: 'relative',
+        zIndex: 1,
+      }}>
+
       {/* ── LEFT PANEL – Brand & Briefing ── */}
-      <div style={{
-        flex: '0 0 55%',
+      <div className="login-left-panel" style={{
+        flex: '1 1 62%',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        padding: '3rem 4rem',
+        padding: '3rem clamp(2.5rem, 4vw, 5rem)',
         position: 'relative',
         zIndex: 1,
       }}>
@@ -124,7 +135,7 @@ export default function LoginPage({ onSuccess }: Props) {
 
         {/* Headline */}
         <h1 style={{
-          fontSize: '2.6rem',
+          fontSize: 'clamp(3rem, 4.8vw, 4.4rem)',
           fontWeight: 800,
           lineHeight: 1.15,
           letterSpacing: '-0.03em',
@@ -137,10 +148,10 @@ export default function LoginPage({ onSuccess }: Props) {
           Intelligent IT Vendor<br />Knowledge Integration
         </h1>
         <p style={{
-          fontSize: '1.05rem',
+          fontSize: 'clamp(1.08rem, 1.3vw, 1.28rem)',
           color: 'rgba(255,255,255,0.55)',
           lineHeight: 1.7,
-          maxWidth: '480px',
+          maxWidth: '660px',
           marginBottom: '2.5rem',
         }}>
           A unified AI-powered operations platform that ingests signals from every vendor tool,
@@ -149,41 +160,41 @@ export default function LoginPage({ onSuccess }: Props) {
         </p>
 
         {/* Capability highlights */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', maxWidth: '540px' }}>
+        <div className="login-capabilities-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1.15rem', maxWidth: '760px' }}>
           {CAPABILITIES.map((c) => (
             <div key={c.title} style={{
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '12px',
-              padding: '1rem 1.1rem',
+              borderRadius: '14px',
+              padding: '1.3rem 1.35rem',
               transition: 'border-color 0.2s',
             }}>
-              <div style={{ fontSize: '1.4rem', marginBottom: '0.4rem' }}>{c.icon}</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', marginBottom: '0.3rem' }}>{c.title}</div>
-              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.55 }}>{c.desc}</div>
+              <div style={{ fontSize: '1.65rem', marginBottom: '0.75rem' }}>{c.icon}</div>
+              <div style={{ fontSize: '1.08rem', fontWeight: 700, color: '#fff', marginBottom: '0.55rem', lineHeight: 1.35 }}>{c.title}</div>
+              <div style={{ fontSize: '0.96rem', color: 'rgba(255,255,255,0.62)', lineHeight: 1.7 }}>{c.desc}</div>
             </div>
           ))}
         </div>
 
         {/* Copyright */}
-        <div style={{ marginTop: '2.5rem', fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)' }}>
+        <div style={{ marginTop: '2.75rem', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)' }}>
           © {new Date().getFullYear()} Raghuprasad Gundeti · All rights reserved · IIVKIS v0.5.0
         </div>
       </div>
 
       {/* ── RIGHT PANEL – Login Card ── */}
-      <div style={{
-        flex: '0 0 45%',
+      <div className="login-right-panel" style={{
+        flex: '1 1 38%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem',
+        padding: '2rem clamp(1rem, 2vw, 2rem)',
         position: 'relative',
         zIndex: 1,
       }}>
 
         {/* Vertical divider */}
-        <div style={{
+        <div className="login-divider" style={{
           position: 'absolute',
           left: 0, top: '8%', bottom: '8%',
           width: '1px',
@@ -377,7 +388,7 @@ export default function LoginPage({ onSuccess }: Props) {
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                     title="Click to fill credentials"
                   >
-                    <td style={{ padding: '0.5rem 0.75rem', color: u.role === 'Operator Admin' ? '#00d4ff' : u.role === 'Customer Admin' ? '#b97aff' : '#ffa500', fontWeight: 600 }}>{u.role}</td>
+                    <td style={{ padding: '0.5rem 0.75rem', color: getRoleAccentColor(u.role), fontWeight: 600 }}>{u.role}</td>
                     <td style={{ padding: '0.5rem 0.75rem', color: 'rgba(255,255,255,0.7)', fontFamily: 'JetBrains Mono, monospace' }}>{u.username}</td>
                     <td style={{ padding: '0.5rem 0.75rem', color: 'rgba(255,255,255,0.45)', fontFamily: 'JetBrains Mono, monospace' }}>{u.password}</td>
                   </tr>
@@ -391,12 +402,43 @@ export default function LoginPage({ onSuccess }: Props) {
 
         </div>
       </div>
+      </div>
 
       {/* Keyframe for orb drift */}
       <style>{`
         @keyframes orb-drift {
           from { transform: translate(0, 0) scale(1); }
           to   { transform: translate(40px, 30px) scale(1.08); }
+        }
+
+        @media (max-width: 1080px) {
+          .login-shell {
+            flex-direction: column;
+          }
+
+          .login-left-panel,
+          .login-right-panel {
+            flex-basis: auto;
+            width: 100%;
+          }
+
+          .login-left-panel {
+            padding: 2rem 1rem 1.25rem;
+          }
+
+          .login-right-panel {
+            padding: 1.25rem 0 0;
+          }
+
+          .login-divider {
+            display: none;
+          }
+        }
+
+        @media (max-width: 720px) {
+          .login-capabilities-grid {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </div>

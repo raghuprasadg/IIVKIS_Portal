@@ -1,5 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
+import { getRoleCapabilities, readSessionUser, type DemoUser } from '../lib/demo-users';
+
 const METRICS = [
   { label: 'MTTR (Mean Time to Resolve)', value: '2h 34m', trend: '-18m', positive: true, sparkData: [80, 75, 85, 70, 65, 72, 60, 155, 154, 153] },
   { label: 'MTTA (Mean Time to Acknowledge)', value: '11m', trend: '-3m', positive: true, sparkData: [18, 16, 20, 14, 17, 13, 15, 12, 14, 11] },
@@ -38,6 +42,33 @@ const DAILY = [
 const maxDaily = Math.max(...DAILY.flatMap(d => [d.open, d.resolved]));
 
 export default function AnalyticsPage() {
+  const [sessionUser, setSessionUser] = useState<DemoUser | null>(null);
+
+  useEffect(() => {
+    setSessionUser(readSessionUser());
+  }, []);
+
+  const capabilities = getRoleCapabilities(sessionUser);
+
+  if (!capabilities.canViewAnalytics) {
+    return (
+      <div>
+        <div className="page-header">
+          <div>
+            <div className="page-title">Analytics</div>
+            <div className="page-subtitle">Analytics is available for Company Admin and Platform Admin roles.</div>
+          </div>
+        </div>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+            Sign in as Company Admin or Platform Admin to view SLA, MTTR, and incident analytics.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="page-header">

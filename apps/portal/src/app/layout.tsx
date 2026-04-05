@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
+
 import './globals.css';
+
 import RootClient from './RootClient';
 
 export const metadata: Metadata = {

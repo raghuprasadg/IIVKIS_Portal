@@ -46,9 +46,11 @@ function normalizeMessages(input: ChatRequestBody['messages'], content: string) 
     }));
 }
 
-async function callOrchestrator(messages: Array<{ role: string; content: string }>) {
-  const tenantId = process.env['PORTAL_TENANT_ID'] ?? 'tenant-uat';
-  const userId = process.env['PORTAL_USER_ID'] ?? 'portal-user';
+async function callOrchestrator(
+  messages: Array<{ role: string; content: string }>,
+  tenantId: string,
+  userId: string,
+) {
 
   const candidates = buildOrchestratorCandidates();
   const paths = ['/tasks', '/orchestrate'];
@@ -75,8 +77,9 @@ async function callOrchestrator(messages: Array<{ role: string; content: string 
         });
 
         const payload = (await response.json().catch(() => ({}))) as {
+          status?: string;
           result?: { content?: string };
-          error?: { message?: string };
+          error?: { code?: string; message?: string };
         };
 
         if (!response.ok) {
@@ -84,7 +87,24 @@ async function callOrchestrator(messages: Array<{ role: string; content: string 
           continue;
         }
 
-        return payload.result?.content?.trim() || payload.error?.message || 'No response returned by orchestrator.';
+        if (payload.status === 'failed') {
+          const errCode = payload.error?.code ?? 'ORCHESTRATOR_FAILED';
+          const errMsg = payload.error?.message ?? 'Orchestrator task failed.';
+          throw new Error(`${errCode}: ${errMsg}`);
+        }
+
+        const content = payload.result?.content?.trim();
+        if (content && content.length > 0) {
+          return content;
+        }
+
+        // If orchestrator returned degraded/failed semantics without content,
+        // surface it as an explicit error so the caller can render guidance.
+        if (payload.error?.message) {
+          throw new Error(payload.error.message);
+        }
+
+        throw new Error('No response returned by orchestrator.');
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
         errors.push(`${baseUrl}${path} -> ${detail}`);
@@ -100,6 +120,8 @@ async function callOrchestrator(messages: Array<{ role: string; content: string 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as ChatRequestBody;
   const content = body.content?.trim();
+  const tenantId = request.headers.get('x-dev-tenant-id') ?? process.env['PORTAL_TENANT_ID'] ?? 'tenant-uat';
+  const userId = request.headers.get('x-dev-user-id') ?? process.env['PORTAL_USER_ID'] ?? 'portal-user';
 
   if (!content) {
     return NextResponse.json(
@@ -111,10 +133,15 @@ export async function POST(request: Request) {
   const messages = normalizeMessages(body.messages, content);
 
   try {
-    const orchestratorReply = await callOrchestrator(messages);
+    const orchestratorReply = await callOrchestrator(messages, tenantId, userId);
     return NextResponse.json({ data: { role: 'assistant', content: orchestratorReply, status: 'success' } });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'AI backend is unavailable.';
+    const raw = error instanceof Error ? error.message : 'AI backend is unavailable.';
+    const lowered = raw.toLowerCase();
+    const message = lowered.includes('llm_unavailable') || lowered.includes('fetch failed')
+      ? 'The orchestration service is reachable, but the configured LLM provider is unavailable. Check LLM_BASE_URL, LLM_API_KEY, and outbound network access from the orchestrator.'
+      : raw;
+
     return NextResponse.json(
       { error: { message } },
       { status: 503 },

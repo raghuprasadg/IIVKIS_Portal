@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+import { buildSessionHeaders, getRoleCapabilities, readSessionUser } from '../lib/demo-users';
 
 interface Message {
   id: string;
@@ -199,10 +201,12 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [displayName, setDisplayName] = useState('Operator');
+  const [sessionUser, setSessionUser] = useState<ReturnType<typeof readSessionUser>>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const activeSession = sessions.find((s) => s.id === activeId) ?? sessions[0]!;
+  const capabilities = getRoleCapabilities(sessionUser);
 
   const getAuthHeaders = (): Record<string, string> => {
     const headers: Record<string, string> = {
@@ -216,11 +220,9 @@ export default function ChatPage() {
 
     if (token) {
       headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-    } else {
-      headers['x-dev-user-id'] = 'portal-user';
-      headers['x-dev-tenant-id'] = 'tenant-uat';
     }
-    return headers;
+
+    return { ...headers, ...buildSessionHeaders(sessionUser) };
   };
 
   const scrollToBottom = () => {
@@ -232,6 +234,8 @@ export default function ChatPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    setSessionUser(readSessionUser());
+
     const fromStorage =
       localStorage.getItem('iivkis_user_name')
       || localStorage.getItem('user_name')
@@ -239,9 +243,34 @@ export default function ChatPage() {
       || localStorage.getItem('displayName')
       || '';
 
+    const session = readSessionUser();
+    if (session?.displayName) {
+      setDisplayName(session.displayName);
+      return;
+    }
+
     const normalized = fromStorage.trim();
     if (normalized) setDisplayName(normalized);
   }, []);
+
+  if (!capabilities.canUseChat) {
+    return (
+      <div>
+        <div className="page-header">
+          <div>
+            <div className="page-title">AI Chat</div>
+            <div className="page-subtitle">AI troubleshooting is reserved for engineering and platform roles.</div>
+          </div>
+        </div>
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Access restricted</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+            Company Admins do not use the AI troubleshooting console. Sign in as Company Engineer or Platform Admin to open guided incident chat.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const buildWelcomeMessage = (name: string): string => {
     return `Hi ${name}, I am your IIVKIS co-working assistant. I can work with you on incidents, correlations, and runbooks. Share an incident ID or goal, and we will triage it together.`;
@@ -385,7 +414,12 @@ export default function ChatPage() {
       const normalizeBackendError = (message?: string): string | null => {
         if (!message) return null;
         const lower = message.toLowerCase();
-        if (lower.includes('fetch failed') || lower.includes('could not reach orchestrator')) {
+        if (
+          lower.includes('fetch failed')
+          || lower.includes('could not reach orchestrator')
+          || lower.includes('llm_unavailable')
+          || lower.includes('llm provider is unavailable')
+        ) {
           return 'I could not reach the orchestration service right now. Check ORCHESTRATOR_URL and ensure the orchestrator is running and reachable from the portal service.';
         }
         return message;
@@ -393,7 +427,7 @@ export default function ChatPage() {
 
       const apiContent = payload.data?.content?.trim();
       const aiContent = apiContent && apiContent.length > 0
-        ? apiContent
+        ? (normalizeBackendError(apiContent) ?? apiContent)
         : normalizeBackendError(payload.error?.message) ||
           'AI backend is unavailable. Please verify API/orchestrator services and LLM configuration.';
 
@@ -509,7 +543,7 @@ export default function ChatPage() {
           {activeSession.messages.map((msg) => (
             <div key={msg.id} className={`message ${msg.role}`}>
               <div className={`message-avatar ${msg.role === 'user' ? 'user-av' : 'ai-av'}`}>
-                {msg.role === 'user' ? 'OP' : 'AI'}
+                {msg.role === 'user' ? (sessionUser?.displayName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'ME') : 'AI'}
               </div>
               <div className="message-meta">
                 <div className="message-bubble">
