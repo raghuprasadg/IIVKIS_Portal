@@ -6,17 +6,19 @@
  */
 
 import { createHash } from 'crypto';
+
 import type {
+  EmbeddingRequest,
+  EmbeddingResponse,
   LLMCompletionRequest,
   LLMCompletionResponse,
   LLMMessage,
-  EmbeddingRequest,
-  EmbeddingResponse,
 } from '@iivkis/shared';
+
 import { CircuitBreaker } from './circuit-breaker';
-import { containsPii, redact } from './pii-redactor';
 import { classify } from './complexity-classifier';
-import type { LLMGatewayConfig, CacheEntry, TaskComplexity } from './types';
+import { containsPii, redact } from './pii-redactor';
+import type { CacheEntry, LLMGatewayConfig, LLMProvider, TaskComplexity } from './types';
 
 /* ── injection patterns (guardrails) ─────────────────────────────────────── */
 
@@ -37,14 +39,31 @@ interface BudgetEntry {
 
 const DAY_MS = 86_400_000;
 
+function buildProviderHeaders(apiKey: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  };
+
+  const referer = process.env['LLM_HTTP_REFERER']?.trim();
+  const title = process.env['LLM_APP_TITLE']?.trim();
+
+  if (referer) headers['HTTP-Referer'] = referer;
+  if (title) headers['X-Title'] = title;
+
+  return headers;
+}
+
 export class LLMGateway {
   private readonly mockMode: boolean;
   private readonly circuitBreakers = new Map<string, CircuitBreaker>();
   private readonly budgetCounters = new Map<string, BudgetEntry>();
   private readonly cache = new Map<string, CacheEntry>();
+  private readonly embeddingModel: string;
 
   constructor(private readonly config: LLMGatewayConfig) {
     this.mockMode = !process.env['LLM_API_KEY'];
+    this.embeddingModel = process.env['LLM_EMBEDDING_MODEL'] ?? 'text-embedding-3-small';
   }
 
   /* ── public API ──────────────────────────────────────────────────────────── */
@@ -65,7 +84,7 @@ export class LLMGateway {
 
     // 4. Model-tier routing
     const complexity: TaskComplexity = classify(req.messages);
-    const model = this.routeModel(complexity, req.tenantId);
+    const model = this.resolveRequestedModel(req, complexity);
 
     // 5. Provider dispatch (with circuit breaker)
     let response: LLMCompletionResponse;
@@ -97,13 +116,12 @@ export class LLMGateway {
       return {
         taskId: req.taskId,
         embeddings: req.texts.map(() => Array.from({ length: 1536 }, () => Math.random() * 2 - 1)),
-        model: req.model ?? 'mock-embedding-model',
+        model: req.model ?? this.embeddingModel,
         tokensUsed: req.texts.reduce((s, t) => s + Math.ceil(t.length / 4), 0),
       };
     }
 
-    // Real embedding call would go here
-    throw new Error('Embedding provider not configured.');
+    return this.callEmbeddingProvider(this.config.defaultProvider, req);
   }
 
   /* ── private pipeline steps ──────────────────────────────────────────────── */
@@ -163,6 +181,15 @@ export class LLMGateway {
     if (complexity === 'simple') return this.config.modelTierMap.fast;
     if (complexity === 'complex') return this.config.modelTierMap.capable;
     return this.config.modelTierMap.auto;
+  }
+
+  private resolveRequestedModel(req: LLMCompletionRequest, complexity: TaskComplexity): string {
+    if (!req.model || req.model === 'auto') {
+      return this.routeModel(complexity, req.tenantId);
+    }
+    if (req.model === 'fast') return this.config.modelTierMap.fast;
+    if (req.model === 'capable') return this.config.modelTierMap.capable;
+    return req.model;
   }
 
   private async dispatch(
@@ -311,14 +338,86 @@ export class LLMGateway {
     };
   }
 
-  /** Placeholder for real HTTP call to an OpenAI-compatible provider. */
   private async callProvider(
-    _provider: import('./types').LLMProvider,
-    _model: string,
-    _req: LLMCompletionRequest,
+    provider: LLMProvider,
+    model: string,
+    req: LLMCompletionRequest,
   ): Promise<LLMCompletionResponse> {
-    // TODO: implement real HTTP call using fetch/https
-    throw new Error('Real provider dispatch not implemented.');
+    const start = Date.now();
+    const url = `${provider.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: buildProviderHeaders(provider.apiKey),
+      body: JSON.stringify({
+        model,
+        messages: req.messages,
+        ...(req.maxTokens !== undefined && { max_tokens: req.maxTokens }),
+        ...(req.temperature !== undefined && { temperature: req.temperature }),
+        stream: false,
+      }),
+    });
+
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => '');
+      throw new Error(
+        `Provider ${provider.name} returned HTTP ${resp.status}${detail ? `: ${detail}` : ''}`,
+      );
+    }
+
+    const data = (await resp.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
+      model?: string;
+    };
+
+    return {
+      taskId: req.taskId,
+      content: data.choices?.[0]?.message?.content?.trim() ?? '',
+      model: data.model ?? model,
+      tokensPrompt: data.usage?.prompt_tokens ?? this.estimateTokens(req.messages),
+      tokensCompletion: data.usage?.completion_tokens ?? 0,
+      cached: false,
+      provider: provider.name,
+      latencyMs: Date.now() - start,
+    };
+  }
+
+  private async callEmbeddingProvider(
+    provider: LLMProvider,
+    req: EmbeddingRequest,
+  ): Promise<EmbeddingResponse> {
+    const model = req.model ?? this.embeddingModel;
+    const url = `${provider.baseUrl.replace(/\/+$/, '')}/embeddings`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: buildProviderHeaders(provider.apiKey),
+      body: JSON.stringify({ model, input: req.texts }),
+    });
+
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => '');
+      throw new Error(
+        `Embedding provider ${provider.name} returned HTTP ${resp.status}${detail ? `: ${detail}` : ''}`,
+      );
+    }
+
+    const data = (await resp.json()) as {
+      data?: Array<{ embedding?: number[]; index?: number }>;
+      usage?: { total_tokens?: number };
+      model?: string;
+    };
+
+    return {
+      taskId: req.taskId,
+      embeddings: (data.data ?? [])
+        .slice()
+        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+        .map((item) => item.embedding ?? []),
+      model: data.model ?? model,
+      tokensUsed:
+        data.usage?.total_tokens ??
+        req.texts.reduce((sum, text) => sum + Math.ceil(text.length / 4), 0),
+    };
   }
 
   private emitAuditLog(

@@ -48,7 +48,7 @@ async function checkRedis(): Promise<CheckResult> {
 
   const t0 = Date.now();
   try {
-    const { default: Redis } = await import('ioredis');
+    const { Redis } = await import('ioredis');
     const client = new Redis(url, {
       connectTimeout: 3000,
       maxRetriesPerRequest: 0,

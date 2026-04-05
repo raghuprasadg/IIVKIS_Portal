@@ -7,7 +7,8 @@
  *  - Maintain an up-to-date vendor knowledge graph
  */
 import type { AgentRequest, AgentResponse, AgentError } from '@iivkis/shared';
-import { HybridRetriever, RAGPipeline, LLMGateway } from './rag';
+
+import { HybridRetriever, RAGPipeline, LLMGateway, chunkArticle, knowledgeBaseStore } from './rag';
 import type { RAGQuery } from './rag';
 
 export const AGENT_ID = 'agent-vendor-knowledge' as const;
@@ -15,8 +16,18 @@ export const AGENT_ID = 'agent-vendor-knowledge' as const;
 /* ── singleton instances ────────────────────────────────────────────────── */
 
 const llmGateway = new LLMGateway();
-const retriever = new HybridRetriever();
+const retriever = new HybridRetriever(llmGateway);
 const ragPipeline = new RAGPipeline(retriever, llmGateway);
+
+function normalizeTags(input: unknown): string[] {
+  if (Array.isArray(input)) {
+    return input.map((tag) => String(tag).trim()).filter(Boolean);
+  }
+  if (typeof input === 'string') {
+    return input.split(',').map((tag) => tag.trim()).filter(Boolean);
+  }
+  return [];
+}
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 
@@ -78,30 +89,91 @@ export async function handle(request: AgentRequest): Promise<AgentResponse> {
       }
 
       case 'vk.ingest': {
-        // TODO: implement full ingestion pipeline (chunking → embedding → upsert)
-        const articleId = String(request.payload['articleId'] ?? 'unknown');
-        console.log(`[vk-agent] Stub ingest received for article ${articleId} (tenant ${request.tenantId})`);
+        const articleId = String(request.payload['articleId'] ?? '').trim();
+        const title = String(request.payload['title'] ?? request.payload['headline'] ?? articleId).trim();
+        const content = String(
+          request.payload['content'] ?? request.payload['text'] ?? request.payload['body'] ?? '',
+        ).trim();
+        const vendorId = typeof request.payload['vendorId'] === 'string'
+          ? request.payload['vendorId']
+          : undefined;
+        const tags = normalizeTags(request.payload['tags']);
+
+        if (!articleId) {
+          return degraded(request, start, 'vk.ingest requires "articleId".');
+        }
+        if (!content) {
+          return degraded(request, start, 'vk.ingest requires article content in "content", "text", or "body".');
+        }
+
+        const chunks = chunkArticle(content, articleId);
+        const embeddingResp = await llmGateway.embed({
+          taskId: `${request.taskId}-embed`,
+          tenantId: request.tenantId,
+          texts: chunks.map((chunk) => chunk.text),
+        });
+
+        const article = knowledgeBaseStore.upsertArticle({
+          articleId,
+          tenantId: request.tenantId,
+          title: title || articleId,
+          content,
+          ...(vendorId !== undefined && { vendorId }),
+          tags,
+          chunks: chunks.map((chunk, index) => ({
+            ...chunk,
+            embedding: embeddingResp.embeddings[index] ?? [],
+          })),
+        });
+
         return {
           taskId: request.taskId,
           status: 'success',
           tenantId: request.tenantId,
-          result: { articleId, ingested: false, message: 'Ingestion pipeline not yet connected.' },
+          result: {
+            articleId,
+            ingested: true,
+            chunkCount: article.chunks.length,
+            embeddingModel: embeddingResp.model,
+            tokensUsed: embeddingResp.tokensUsed,
+          },
           latencyMs: Date.now() - start,
           createdAt: new Date().toISOString(),
         };
       }
 
       case 'vk.article.get': {
-        // TODO: implement real DB lookup
         const articleId = String(request.payload['articleId'] ?? '');
         if (!articleId) {
           return degraded(request, start, 'vk.article.get requires "articleId".');
         }
+
+        const article = knowledgeBaseStore.getArticle(request.tenantId, articleId);
+        if (!article) {
+          return {
+            taskId: request.taskId,
+            status: 'degraded',
+            tenantId: request.tenantId,
+            result: { articleId, found: false, message: 'Article not found in the knowledge store.' },
+            latencyMs: Date.now() - start,
+            createdAt: new Date().toISOString(),
+          };
+        }
+
         return {
           taskId: request.taskId,
-          status: 'degraded',
+          status: 'success',
           tenantId: request.tenantId,
-          result: { articleId, found: false, message: 'Article DB not yet connected.' },
+          result: {
+            articleId,
+            found: true,
+            title: article.title,
+            content: article.content,
+            ...(article.vendorId !== undefined && { vendorId: article.vendorId }),
+            tags: article.tags,
+            chunkCount: article.chunks.length,
+            updatedAt: article.updatedAt,
+          },
           latencyMs: Date.now() - start,
           createdAt: new Date().toISOString(),
         };

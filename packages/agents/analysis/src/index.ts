@@ -8,7 +8,9 @@
  *  - Generate analytics reports
  */
 import { createHash } from 'crypto';
+
 import type { AgentRequest, AgentResponse, Signal, CorrelatedGroupWithEvidence, RCAResult } from '@iivkis/shared';
+
 import { CorrelationEngine } from './correlation/index.js';
 import type { EnrichedSignal, ProcessorContext } from './correlation/index.js';
 import { KGService } from './kg/service.js';
@@ -33,11 +35,11 @@ async function enrichSignals(signals: Signal[]): Promise<EnrichedSignal[]> {
   const ciResolvedSignals = signals.map((signal) => {
     const raw = signal.rawPayload ?? {};
     const resolvedCi = ciResolver.resolve({
-      ciId: signal.affectedCiId,
-      host: typeof raw['host'] === 'string' ? raw['host'] : undefined,
-      hostname: typeof raw['hostname'] === 'string' ? raw['hostname'] : undefined,
-      ip: typeof raw['ip'] === 'string' ? raw['ip'] : undefined,
-      cloudId: typeof raw['cloud_id'] === 'string' ? raw['cloud_id'] : undefined,
+      ...(signal.affectedCiId !== undefined && { ciId: signal.affectedCiId }),
+      ...(typeof raw['host'] === 'string' && { host: raw['host'] }),
+      ...(typeof raw['hostname'] === 'string' && { hostname: raw['hostname'] }),
+      ...(typeof raw['ip'] === 'string' && { ip: raw['ip'] }),
+      ...(typeof raw['cloud_id'] === 'string' && { cloudId: raw['cloud_id'] }),
     });
     return {
       ...signal,

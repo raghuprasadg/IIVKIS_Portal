@@ -13,3 +13,6 @@ export type { RAGResponse } from './pipeline';
 
 export { LLMGateway } from './llm-gateway';
 export type { LLMGatewayClientConfig } from './llm-gateway';
+
+export { knowledgeBaseStore } from './store';
+export type { StoredArticle, StoredChunk } from './store';

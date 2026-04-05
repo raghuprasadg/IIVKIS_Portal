@@ -6,6 +6,7 @@
  * Must run after authMiddleware.
  */
 import { type Request, type Response, type NextFunction } from 'express';
+
 import { getPool, setPool } from '../infra/db';
 
 export { setPool };
@@ -29,7 +30,7 @@ export async function tenantMiddleware(req: Request, res: Response, next: NextFu
       if (released) return;
       released = true;
 
-      req.dbClient = undefined;
+      delete req.dbClient;
       try {
         await client.query('RESET app.current_tenant_id');
       } catch {

@@ -4,8 +4,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "jsx": "react-jsx",
-    "module": "CommonJS",
-    "moduleResolution": "node"
+    "module": "Node16",
+    "moduleResolution": "node16"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["node_modules", "dist"]

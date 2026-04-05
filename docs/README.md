@@ -1,6 +1,6 @@
 # IIVKIS Documentation Index
 
-**Last refreshed:** 2026-04-03
+**Last refreshed:** 2026-04-04
 
 This index is the canonical entry point for the documentation set.
 
@@ -30,10 +30,12 @@ This index is the canonical entry point for the documentation set.
 - [phase10-validation.md](phase10-validation.md): Phase 10 validation.
 - [phase11-validation.md](phase11-validation.md): Phase 11 validation.
 - [phase12-validation.md](phase12-validation.md): Phase 12 validation (updated phrasing for tenant request DB context).
+- [llm-distillation-validation.md](llm-distillation-validation.md): Validation report for live LLM provider support and Vendor Knowledge distillation flow.
 
 ## Post-Phase Implementation Refresh
 
 - [implementation-refresh-2026-04-03.md](implementation-refresh-2026-04-03.md): Runtime alignment updates after phase validation snapshots.
+- [implementation-refresh-2026-04-04.md](implementation-refresh-2026-04-04.md): TypeScript workspace stabilization, live LLM integration, Vendor Knowledge distillation activation, and editor/runtime alignment updates.
 
 ## Reading Order
 
@@ -44,4 +46,6 @@ This index is the canonical entry point for the documentation set.
 5. lld.md
 6. dfd.md
 7. implementation-refresh-2026-04-03.md
-8. phase validation reports (5 through 12)
+8. implementation-refresh-2026-04-04.md
+9. llm-distillation-validation.md
+10. phase validation reports (5 through 12)

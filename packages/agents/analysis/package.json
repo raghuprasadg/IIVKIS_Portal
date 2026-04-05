@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@iivkis/shared": "*"
+    "@iivkis/shared": "*",
+    "neo4j-driver": "^5.28.3"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",

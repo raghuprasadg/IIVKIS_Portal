@@ -67,6 +67,25 @@ const STATUS_COLOR: Record<string, string> = {
   Closed: 'var(--color-text-muted)',
 };
 
+const CORRELATION_MANUAL = [
+  {
+    title: 'How to Read a Group',
+    body: 'Start with confidence, signal count, and linked incidents. A high-confidence group with repeated CI overlap usually deserves immediate triage before you inspect lower-confidence clusters.',
+  },
+  {
+    title: 'How to Investigate',
+    body: 'Open the group, compare first-seen and last-seen times, then validate whether the same CIs appear in incidents, telemetry spikes, or vendor alerts during that window.',
+  },
+  {
+    title: 'When to Escalate',
+    body: 'Escalate when one group spans multiple business services, confidence keeps rising after mitigation, or the same pattern reappears after a supposed recovery.',
+  },
+  {
+    title: 'How to Close Cleanly',
+    body: 'Close a correlation only after telemetry returns to baseline, linked incidents stop growing, and the remediation note explains why confidence should decay instead of rebound.',
+  },
+];
+
 export default function CorrelationsPage() {
   const [sessionUser, setSessionUser] = useState<DemoUser | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -137,8 +156,8 @@ export default function CorrelationsPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: detail ? '1fr 1fr' : '1fr', gap: '1.5rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="correlation-layout" style={{ display: 'grid', gridTemplateColumns: detail ? '1fr 1fr' : '1fr', gap: '1.5rem' }}>
+        <div className="correlation-group-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {GROUPS.map((g) => (
             <div
               key={g.id}
@@ -169,7 +188,7 @@ export default function CorrelationsPage() {
         </div>
 
         {detail && (
-          <div className="glass-card" style={{ padding: '1.5rem', alignSelf: 'start' }}>
+          <div className="glass-card correlation-detail-card" style={{ padding: '1.5rem', alignSelf: 'start' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <span style={{ fontFamily: 'monospace', color: 'var(--color-cyan)', fontWeight: 700 }}>{detail.id}</span>
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
@@ -197,69 +216,30 @@ export default function CorrelationsPage() {
       <div style={{ marginTop: '1.5rem' }}>
         <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
           <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.3rem' }}>
-            Correlation Engines
+            Correlation Help Manual
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-            {engines.length} engines active: {coreEngines.length} core use cases and {advancedEngines.length} advanced differentiators.
+            {engines.length} engines are active in the platform. Use this guide to understand how to read a group, investigate it, and decide when to escalate or close it.
           </div>
         </div>
 
-        <div style={{ marginBottom: '0.8rem', fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-secondary)' }}>
-          Core Correlation Use Cases
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.9rem' }}>
-          {coreEngines.map(engine => (
-            <div key={engine.id} className="glass-card" style={{ padding: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', gap: '0.8rem' }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: 700, lineHeight: 1.3 }}>{engine.title}</div>
-                <span className="badge badge-info">E-{engine.id.toString().padStart(2, '0')}</span>
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginBottom: '0.4rem' }}>
-                <strong>How:</strong> {engine.how}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginBottom: '0.4rem' }}>
-                <strong>Flow:</strong> {engine.flow}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginBottom: '0.4rem' }}>
-                <strong>Requirement:</strong> {engine.requirement}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--color-green)', marginBottom: '0.25rem' }}>
-                <strong>Solves:</strong> {engine.solves}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-                <strong>Why:</strong> {engine.why}
-              </div>
+        <div className="correlation-manual-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.9rem' }}>
+          {CORRELATION_MANUAL.map((entry) => (
+            <div key={entry.title} className="glass-card" style={{ padding: '1rem' }}>
+              <div style={{ fontSize: '0.86rem', fontWeight: 700, lineHeight: 1.3, marginBottom: '0.55rem' }}>{entry.title}</div>
+              <div style={{ fontSize: '0.76rem', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>{entry.body}</div>
             </div>
           ))}
         </div>
 
-        <div style={{ marginTop: '1.1rem', marginBottom: '0.8rem', fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-secondary)' }}>
-          Advanced Correlation
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.9rem' }}>
-          {advancedEngines.map(engine => (
-            <div key={engine.id} className="glass-card" style={{ padding: '1rem', border: '1px solid rgba(0,212,255,0.25)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', gap: '0.8rem' }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: 700, lineHeight: 1.3 }}>{engine.title}</div>
-                <span className="badge badge-success">E-{engine.id.toString().padStart(2, '0')}</span>
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginBottom: '0.4rem' }}>
-                <strong>How:</strong> {engine.how}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginBottom: '0.4rem' }}>
-                <strong>Flow:</strong> {engine.flow}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginBottom: '0.4rem' }}>
-                <strong>Requirement:</strong> {engine.requirement}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--color-green)', marginBottom: '0.25rem' }}>
-                <strong>Solves:</strong> {engine.solves}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-                <strong>Why:</strong> {engine.why}
-              </div>
-            </div>
-          ))}
+        <div className="glass-card" style={{ padding: '1rem', marginTop: '1rem' }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.45rem' }}>Active Engine Catalog</div>
+          <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)', lineHeight: 1.7 }}>
+            Core engines: {coreEngines.map((engine) => engine.title).join(', ')}.
+          </div>
+          <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)', lineHeight: 1.7, marginTop: '0.35rem' }}>
+            Advanced engines: {advancedEngines.map((engine) => engine.title).join(', ')}.
+          </div>
         </div>
       </div>
     </div>

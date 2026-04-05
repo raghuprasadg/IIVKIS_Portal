@@ -5,8 +5,9 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "resolveJsonModule": true,
-    "allowJs": true,
+    "allowJs": false,
     "checkJs": false,
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -19,21 +20,30 @@
     "sourceMap": true,
     "composite": true,
     "incremental": true,
-    "baseUrl": ".",
     "paths": {
-      "@iivkis/shared": ["packages/shared/src"],
-      "@iivkis/shared/*": ["packages/shared/src/*"],
-      "@iivkis/ui": ["packages/ui/src"],
-      "@iivkis/ui/*": ["packages/ui/src/*"],
-      "@iivkis/agents-analysis": ["packages/agents/analysis/src"],
-      "@iivkis/agents-analysis/*": ["packages/agents/analysis/src/*"],
-      "@iivkis/agents-integration": ["packages/agents/integration/src"],
-      "@iivkis/agents-integration/*": ["packages/agents/integration/src/*"],
-      "@iivkis/agents-troubleshooting": ["packages/agents/troubleshooting/src"],
-      "@iivkis/agents-troubleshooting/*": ["packages/agents/troubleshooting/src/*"],
-      "@iivkis/agents-vendor-knowledge": ["packages/agents/vendor-knowledge/src"],
-      "@iivkis/agents-vendor-knowledge/*": ["packages/agents/vendor-knowledge/src/*"]
+      "@iivkis/shared": ["./packages/shared/src"],
+      "@iivkis/shared/*": ["./packages/shared/src/*"],
+      "@iivkis/ui": ["./packages/ui/src"],
+      "@iivkis/ui/*": ["./packages/ui/src/*"],
+      "@iivkis/agents-analysis": ["./packages/agents/analysis/src"],
+      "@iivkis/agents-analysis/*": ["./packages/agents/analysis/src/*"],
+      "@iivkis/agents-integration": ["./packages/agents/integration/src"],
+      "@iivkis/agents-integration/*": ["./packages/agents/integration/src/*"],
+      "@iivkis/agents-troubleshooting": ["./packages/agents/troubleshooting/src"],
+      "@iivkis/agents-troubleshooting/*": ["./packages/agents/troubleshooting/src/*"],
+      "@iivkis/agents-vendor-knowledge": ["./packages/agents/vendor-knowledge/src"],
+      "@iivkis/agents-vendor-knowledge/*": ["./packages/agents/vendor-knowledge/src/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "build", ".next", "coverage"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    ".next",
+    "coverage",
+    "**/dist",
+    "**/build",
+    "**/.next",
+    "**/coverage"
+  ]
 }

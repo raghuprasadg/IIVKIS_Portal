@@ -8,6 +8,7 @@
  */
 
 import { createHash } from 'crypto';
+
 import type {
   LLMCompletionRequest,
   LLMCompletionResponse,
@@ -20,6 +21,21 @@ export interface LLMGatewayClientConfig {
   apiKey?: string;
   model?: string;
   embeddingModel?: string;
+}
+
+function buildProviderHeaders(apiKey: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  };
+
+  const referer = process.env['LLM_HTTP_REFERER']?.trim();
+  const title = process.env['LLM_APP_TITLE']?.trim();
+
+  if (referer) headers['HTTP-Referer'] = referer;
+  if (title) headers['X-Title'] = title;
+
+  return headers;
 }
 
 export class LLMGateway {
@@ -56,8 +72,7 @@ export class LLMGateway {
     if (this.mockMode) {
       resp = this.mockCompletion(req, start);
     } else {
-      // TODO: implement real HTTP call to LLM provider
-      resp = this.mockCompletion(req, start);
+      resp = await this.callCompletionProvider(req, start);
     }
 
     if (req.cacheable) {
@@ -79,8 +94,7 @@ export class LLMGateway {
       };
     }
 
-    // TODO: implement real embedding call
-    throw new Error('Embedding provider not configured in VK agent gateway.');
+    return this.callEmbeddingProvider(req);
   }
 
   /* ── cache helpers ──────────────────────────────────────────────────────── */
@@ -130,6 +144,86 @@ export class LLMGateway {
       cached: false,
       provider: 'mock',
       latencyMs: Date.now() - start,
+    };
+  }
+
+  private async callCompletionProvider(
+    req: LLMCompletionRequest,
+    start: number,
+  ): Promise<LLMCompletionResponse> {
+    const model = req.model ?? this.config.model;
+    const url = `${this.config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: buildProviderHeaders(this.config.apiKey),
+      body: JSON.stringify({
+        model,
+        messages: req.messages,
+        ...(req.maxTokens !== undefined && { max_tokens: req.maxTokens }),
+        ...(req.temperature !== undefined && { temperature: req.temperature }),
+        stream: false,
+      }),
+    });
+
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => '');
+      throw new Error(
+        `Vendor Knowledge LLM provider returned HTTP ${resp.status}${detail ? `: ${detail}` : ''}`,
+      );
+    }
+
+    const data = (await resp.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
+      model?: string;
+    };
+
+    return {
+      taskId: req.taskId,
+      content: data.choices?.[0]?.message?.content?.trim() ?? '',
+      model: data.model ?? model,
+      tokensPrompt:
+        data.usage?.prompt_tokens ??
+        Math.ceil(req.messages.reduce((sum, msg) => sum + msg.content.length, 0) / 4),
+      tokensCompletion: data.usage?.completion_tokens ?? 0,
+      cached: false,
+      provider: 'openai-compatible',
+      latencyMs: Date.now() - start,
+    };
+  }
+
+  private async callEmbeddingProvider(req: EmbeddingRequest): Promise<EmbeddingResponse> {
+    const model = req.model ?? this.config.embeddingModel;
+    const url = `${this.config.baseUrl.replace(/\/+$/, '')}/embeddings`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: buildProviderHeaders(this.config.apiKey),
+      body: JSON.stringify({ model, input: req.texts }),
+    });
+
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => '');
+      throw new Error(
+        `Vendor Knowledge embedding provider returned HTTP ${resp.status}${detail ? `: ${detail}` : ''}`,
+      );
+    }
+
+    const data = (await resp.json()) as {
+      data?: Array<{ embedding?: number[]; index?: number }>;
+      usage?: { total_tokens?: number };
+      model?: string;
+    };
+
+    return {
+      taskId: req.taskId,
+      embeddings: (data.data ?? [])
+        .slice()
+        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+        .map((item) => item.embedding ?? []),
+      model: data.model ?? model,
+      tokensUsed:
+        data.usage?.total_tokens ??
+        req.texts.reduce((sum, text) => sum + Math.ceil(text.length / 4), 0),
     };
   }
 }

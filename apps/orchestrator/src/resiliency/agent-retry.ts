@@ -8,7 +8,6 @@
  *
  * Retryable conditions:
  *  - Response status is 'failed' AND error.retryable === true
- *  - Response status is 'degraded' (transient downstream unavailability)
  *  - Exception thrown by agent handler
  *
  * Non-retryable:
@@ -87,16 +86,17 @@ export async function dispatchWithResilience(
           }
 
           // Treat retryable failures as transient errors (they WILL be retried)
-          if (
-            (resp.status === 'failed' && resp.error?.retryable !== false) ||
-            resp.status === 'degraded'
-          ) {
+          if (resp.status === 'failed' && resp.error?.retryable !== false) {
             const transientErr = new Error(
               resp.error?.message ?? `Agent returned status '${resp.status}'`,
             );
             (transientErr as Error & { retryable: boolean }).retryable = true;
             throw transientErr;
           }
+
+          // 'degraded' is a valid response the caller can surface directly.
+          // Retrying degraded responses caused avoidable circuit-open failures
+          // when upstream providers are intentionally unavailable.
 
           return resp;
         }),

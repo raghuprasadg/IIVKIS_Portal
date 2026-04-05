@@ -241,12 +241,12 @@ const PLATFORM_TICKETS = [
   { id: 'PLAT-1171', title: 'Validate ServiceNow connector failover policy before renewal', status: 'Resolved', sla: 'Closed' },
 ] as const;
 
-const EXPERIENCE_TABS = ['IDE', 'Code Security', 'CI/CD', 'Runtime Tests', 'AI Assistant'] as const;
+const EXPERIENCE_TABS = ['Incidents', 'AI Copilot', 'Correlations', 'Knowledge', 'Recovery'] as const;
 
 const EXPERIENCE_FINDINGS = [
-  { title: 'SQL injection in auth flow', severity: 'High', tone: 'pill-coral' },
-  { title: 'Outdated package in portal-ui', severity: 'Medium', tone: 'pill-amber' },
-  { title: 'Leaked GitHub token in config', severity: 'Critical', tone: 'pill-coral' },
+  { title: 'ServiceNow timeout cascade still active', severity: 'Critical', tone: 'pill-coral' },
+  { title: 'Vault certificate expiry window approaching', severity: 'High', tone: 'pill-coral' },
+  { title: 'Redis session eviction pattern needs confirmation', severity: 'Medium', tone: 'pill-amber' },
 ] as const;
 
 const ENGINEER_ASSETS = ['Runbooks', 'Correlated signals', 'Timeline notes', 'Root-cause hypotheses', 'Recovery checks', 'Postmortem drafts'] as const;
@@ -348,8 +348,8 @@ function CorrelationPanel() {
 function SparklinePanel() {
   return (
     <div className="glass-card section-card" style={{ flex: 1 }}>
-      <div className="section-title"><span>📈</span> KA Search Volume</div>
-      <div style={{ fontSize: '0.92rem', color: 'var(--color-text-secondary)' }}>Last 12 hours</div>
+      <div className="section-title"><span>📈</span> Signal Volume</div>
+      <div style={{ fontSize: '0.92rem', color: 'var(--color-text-secondary)' }}>Last 12 hours of correlated platform activity</div>
       <div className="sparkline">
         {SPARK_HEIGHTS.map((h, i) => (
           <div key={i} className="spark-bar" style={{ height: `${h}%` }} />
@@ -441,8 +441,8 @@ function ExperienceBoard({ workspace, sessionUser }: { workspace: WorkspaceKind;
         <div className="experience-board-header">
           <div>
             <div className="experience-kicker">Customer Admin Workspace</div>
-            <div className="experience-title">Govern the {sessionUser.org} workspace without entering engineer-only flows</div>
-            <div className="experience-subtitle">This view is for subscriptions, integrations, spend, policy, and platform requests.</div>
+            <div className="experience-title">Govern the {sessionUser.org} workspace with admin-only controls</div>
+            <div className="experience-subtitle">Subscriptions, integrations, policy, billing, and platform requests live here.</div>
           </div>
           <div className="experience-actions">
             <button className="btn-primary">Review Renewal</button>
@@ -493,13 +493,13 @@ function ExperienceBoard({ workspace, sessionUser }: { workspace: WorkspaceKind;
     <section className="glass-card experience-board">
       <div className="experience-board-header">
         <div>
-            <div className="experience-kicker">Customer Engineer Workspace</div>
-          <div className="experience-title">Secure delivery view for {sessionUser.org}</div>
+          <div className="experience-kicker">Customer Engineer Workspace</div>
+          <div className="experience-title">Incident operations view for {sessionUser.org}</div>
           <div className="experience-subtitle">Incident response, AI guidance, correlation, and knowledge work stay in one engineer-focused console.</div>
         </div>
         <div className="experience-actions">
-          <button className="btn-primary">Run All Scans</button>
-          <button className="btn-ghost">Deploy Guarded</button>
+          <button className="btn-primary">Open Incident</button>
+          <button className="btn-ghost">Review Correlations</button>
         </div>
       </div>
 
@@ -512,42 +512,44 @@ function ExperienceBoard({ workspace, sessionUser }: { workspace: WorkspaceKind;
       <div className="experience-grid">
         <div className="experience-editor glass-card">
           <div className="experience-editor-topbar">
-            <span>auth.ts</span>
-            <span>user.js</span>
-            <span>product.js</span>
+            <span>incident-summary.md</span>
+            <span>signal-timeline.json</span>
+            <span>vendor-notes.txt</span>
           </div>
-          <pre className="experience-code-block">{`const express = require('express');
-const router = express.Router();
+          <pre className="experience-code-block">{`INC-2401  ServiceNow API timeout cascade
 
-router.post('/login', (req, res) => {
-  const { user, pass } = req.body;
-  const query = "SELECT * FROM users WHERE user='" + user + "' AND pass='" + pass + "'";
-  db.query(query, (err, result) => {
-    res.json(result);
-  });
-});`}</pre>
+Window: 12m active
+Primary signals:
+- API gateway timeout rate rose above 8.2%
+- Postgres slow-query latency crossed 3.1s
+- ServiceNow connector retries saturated the worker pool
+
+Immediate checks:
+1. Validate connector pool saturation on snow-conn-pool
+2. Compare retry storm onset with recent change CHG-8821
+3. Confirm customer-facing incident impact and blast radius`}</pre>
         </div>
 
         <div className="experience-assistant glass-card">
-          <div className="experience-panel-title">AI Assistant</div>
+          <div className="experience-panel-title">AI Copilot</div>
           <div className="experience-assistant-copy">
-            This query is vulnerable to SQL injection. Replace string concatenation with parameterized queries and preserve the existing login contract.
+            Correlated evidence suggests the timeout burst is tied to connector retry saturation after a recent change window. Check the worker backlog and compare it with CHG-8821 before escalating.
           </div>
           <div className="experience-patch-preview">
-            <div className="experience-patch-label">Suggested patch</div>
-            <div className="experience-patch-body">db.query(&apos;SELECT * FROM users WHERE user = $1 AND pass = $2&apos;, [user, pass]);</div>
+            <div className="experience-patch-label">Suggested next step</div>
+            <div className="experience-patch-body">Pause connector retries, drain the queue, and confirm whether latency normalizes before restoring full throughput.</div>
           </div>
-          <button className="btn-primary" style={{ width: '100%' }}>Apply Fix</button>
+          <button className="btn-primary" style={{ width: '100%' }}>Open AI Chat</button>
         </div>
 
         <div className="experience-findings glass-card">
-          <div className="experience-panel-title">Security Findings</div>
+          <div className="experience-panel-title">Investigation Priorities</div>
           <div className="experience-finding-list">
             {EXPERIENCE_FINDINGS.map((finding) => (
               <div key={finding.title} className="experience-finding-item">
                 <div>
                   <div className="experience-finding-title">{finding.title}</div>
-                  <div className="experience-finding-meta">Correlated across code, dependency, and runtime evidence</div>
+                  <div className="experience-finding-meta">Correlated across incident, telemetry, and vendor evidence</div>
                 </div>
                 <span className={`pill ${finding.tone}`}>{finding.severity}</span>
               </div>
@@ -560,12 +562,12 @@ router.post('/login', (req, res) => {
         <div className="experience-correlation glass-card">
           <div className="experience-panel-title">Correlation Path</div>
           <div className="experience-correlation-flow">
-            <span>Code</span>
-            <span>API</span>
-            <span>Runtime</span>
-            <span>Exposure</span>
+            <span>Signal</span>
+            <span>Incident</span>
+            <span>Correlation</span>
+            <span>Recovery</span>
           </div>
-          <div className="experience-correlation-note">Exploit path remains open until fix, test, and deploy complete.</div>
+          <div className="experience-correlation-note">Confidence improves as incident evidence, vendor knowledge, and recovery checks line up on the same timeline.</div>
         </div>
 
         <div className="experience-integrations glass-card">
@@ -666,7 +668,7 @@ function CompanyEngineerWorkspace() {
         <CorrelationPanel />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="dashboard-stack-column">
         <SparklinePanel />
         <div className="glass-card section-card" style={{ flex: 1 }}>
           <div className="section-title"><span>🧪</span> Vendor Proof</div>
@@ -684,7 +686,7 @@ function CompanyEngineerWorkspace() {
 
 function CompanyAdminWorkspace() {
   return (
-    <div className="dashboard-grid" style={{ marginTop: '1rem' }}>
+    <div className="dashboard-grid dashboard-grid-admin" style={{ marginTop: '1rem' }}>
       <div className="glass-card section-card">
         <div className="section-title">
           <span className="section-title-icon">🧭</span>
@@ -735,7 +737,7 @@ function CompanyAdminWorkspace() {
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="dashboard-stack-column">
         <div className="glass-card section-card" style={{ flex: 1 }}>
           <div className="section-title"><span>🎫</span> Platform Tickets</div>
           {PLATFORM_TICKETS.map((ticket) => (
@@ -805,7 +807,7 @@ function PlatformAdminWorkspace() {
         <CorrelationPanel />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="dashboard-stack-column">
         <SparklinePanel />
         <div className="glass-card section-card" style={{ flex: 1 }}>
           <div className="section-title"><span>📦</span> Platform Queue</div>
@@ -865,26 +867,26 @@ export default function DashboardPage() {
     <div className="landing-dashboard dashboard-story">
       <section className="story-hero glass-card">
         <div className="story-hero-copy">
-          <div className="story-kicker">Secure Developer Suite</div>
+          <div className="story-kicker">IIVKIS Operations Portal</div>
           <div className="story-title">Each role gets its own governed workspace.</div>
           <div className="story-subtitle">{subtitle}</div>
 
           <div className="story-hero-actions">
             <button className="btn-primary">Open Workspace</button>
-            <button className="btn-ghost">Review Risk Graph</button>
+            <button className="btn-ghost">Review Correlations</button>
           </div>
 
           <div className="story-hero-legend">
-            <span className="story-legend-pill">Built-in IDE</span>
-            <span className="story-legend-pill">SAST + SCA + Secrets</span>
-            <span className="story-legend-pill">AI-Assisted Remediation</span>
+            <span className="story-legend-pill">Incident triage</span>
+            <span className="story-legend-pill">Tenant-safe AI</span>
+            <span className="story-legend-pill">Vendor knowledge</span>
             <span className="story-legend-pill">Runtime Correlation</span>
           </div>
         </div>
 
         <div className="story-command-card glass-card">
           <div className="story-command-topline">
-            <span className="status-badge online">Secure Delivery Active</span>
+            <span className="status-badge online">Platform Live</span>
             <span className="metric-value">{time}</span>
           </div>
 
@@ -893,27 +895,27 @@ export default function DashboardPage() {
 
           <div className="story-command-metrics">
             <div>
-              <div className="story-command-label">Projects protected</div>
-              <div className="story-command-value">128</div>
+              <div className="story-command-label">Open incidents</div>
+              <div className="story-command-value">24</div>
             </div>
             <div>
-              <div className="story-command-label">High-risk findings</div>
-              <div className="story-command-value">07</div>
+              <div className="story-command-label">Healthy integrations</div>
+              <div className="story-command-value">11</div>
             </div>
             <div>
-              <div className="story-command-label">Deploy readiness</div>
-              <div className="story-command-value">82%</div>
+              <div className="story-command-label">Correlation confidence</div>
+              <div className="story-command-value">87%</div>
             </div>
           </div>
 
           <div className="story-command-rail">
-            <div className="story-rail-label">Attack surface drift</div>
+            <div className="story-rail-label">Signal alignment</div>
             <div className="story-mini-chart">
               {SPARK_HEIGHTS.slice(0, 10).map((height, index) => (
                 <span key={index} style={{ height: `${Math.max(22, height)}%` }} />
               ))}
             </div>
-            <div className="story-rail-note">Runtime protections and code changes remain correlated across this release window.</div>
+            <div className="story-rail-note">Incident, telemetry, and vendor signals remain synchronized across the current investigation window.</div>
           </div>
         </div>
       </section>
@@ -924,7 +926,7 @@ export default function DashboardPage() {
         <div className="story-section-heading">
           <div>
             <div className="page-title">Role Journey</div>
-            <div className="page-subtitle">The portal changes shape by responsibility, so every role sees the workflow that actually belongs to them.</div>
+            <div className="page-subtitle">Each role sees the workflow that belongs to its responsibilities, not a shared generic dashboard.</div>
           </div>
         </div>
 

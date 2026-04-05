@@ -11,6 +11,15 @@ infrastructure services locally.
 # 1. Copy and (optionally) edit the environment file
 cp .env.example .env
 
+# Example for OpenRouter in infra/.env
+# LLM_API_KEY=<your-openrouter-key>
+# LLM_BASE_URL=https://openrouter.ai/api/v1
+# LLM_HTTP_REFERER=http://localhost:3000
+# LLM_APP_TITLE=IIVKIS Portal
+# LLM_MODEL_FAST=openai/gpt-4o-mini
+# LLM_MODEL_CAPABLE=openai/gpt-4o
+# LLM_EMBEDDING_MODEL=openai/text-embedding-3-small
+
 # 2. Start all services
 docker compose up -d
 

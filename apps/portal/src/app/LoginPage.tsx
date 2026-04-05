@@ -19,7 +19,7 @@ const CAPABILITIES = [
   {
     icon: '🔗',
     title: 'Multi-Vendor Knowledge Graph',
-    desc: 'Unified knowledge base covering Cisco, Palo Alto, Fortinet, F5, ServiceNow, Datadog and 30+ integrations.',
+    desc: 'Unified knowledge base covering Cisco, Palo Alto, Fortinet, F5, ServiceNow, Datadog, and 30+ governed vendor knowledge sources.',
   },
   {
     icon: '📡',
@@ -29,7 +29,7 @@ const CAPABILITIES = [
   {
     icon: '🏢',
     title: 'Role-Specific Workspaces',
-    desc: 'Platform admins, customer admins, and customer engineers each see distinct features, content, and controls with strict tenant isolation.',
+    desc: 'Platform admins, customer admins, and customer engineers each see distinct features, content, and controls. Integration management stays limited to platform and customer admin roles.',
   },
 ];
 
